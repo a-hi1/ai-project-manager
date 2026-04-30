@@ -73,9 +73,13 @@ public class TaskController {
     @PutMapping("/update")
     public Map<String, Object> updateTask(@RequestBody Task task) {
         try {
+            System.out.println("更新任务，收到数据 id: " + task.getId() + ", status: " + task.getStatus());
             Task updatedTask = taskService.updateTask(task);
+            System.out.println("任务更新成功");
             return Map.of("success", true, "data", updatedTask);
         } catch (Exception e) {
+            System.err.println("任务更新失败: " + e.getMessage());
+            e.printStackTrace();
             return Map.of("success", false, "message", e.getMessage());
         }
     }

@@ -1,0 +1,26 @@
+// 安全的图标导入 - 只使用基础图标
+export {
+  ArrowLeft,
+  ArrowRight,
+  Document,
+  Edit,
+  Plus,
+  Search,
+  Delete,
+  Warning,
+  Bell,
+  Calendar,
+  Folder,
+  Flag,
+  List,
+  Message,
+  HomeFilled,
+  CircleCheck,
+  Refresh,
+  Download,
+  Timer,
+  Box,
+  CircleClose,
+  RefreshLeft,
+  View
+} from '@element-plus/icons-vue';

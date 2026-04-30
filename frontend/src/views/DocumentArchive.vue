@@ -3,7 +3,13 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <h2>文档归档</h2>
+          <div class="header-left">
+            <el-button type="primary" @click="goBack">
+              <el-icon><ArrowLeft /></el-icon>
+              返回
+            </el-button>
+            <h2>文档归档</h2>
+          </div>
           <div class="header-actions">
             <el-button type="primary" @click="archiveAllDocuments">归档所有文档</el-button>
           </div>
@@ -27,10 +33,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import { ArrowLeft } from '@element-plus/icons-vue';
 
 const route = useRoute();
+const router = useRouter();
 const projectId = Number(route.params.id);
 
 const archives = ref<any[]>([]);
@@ -85,6 +93,10 @@ const getDocTypeName = (docType: string) => {
   return nameMap[docType] || docType;
 };
 
+const goBack = () => {
+  router.back();
+};
+
 onMounted(() => {
   fetchArchives();
 });
@@ -93,6 +105,8 @@ onMounted(() => {
 <style scoped>
 .document-archive {
   padding: 20px;
+  background-color: #f5f7fa;
+  min-height: 100vh;
 }
 
 .card-header {
@@ -101,8 +115,16 @@ onMounted(() => {
   align-items: center;
 }
 
-.card-header h2 {
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.header-left h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #303133;
 }
 </style>

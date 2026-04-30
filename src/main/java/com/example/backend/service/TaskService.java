@@ -71,8 +71,42 @@ public class TaskService extends ServiceImpl<TaskMapper, Task> {
 
     @Transactional
     public Task updateTask(Task task) {
-        updateById(task);
-        return task;
+        System.out.println("开始更新任务 ID: " + task.getId());
+        
+        Task existingTask = getById(task.getId());
+        if (existingTask == null) {
+            throw new RuntimeException("任务不存在");
+        }
+        
+        if (task.getStatus() != null) {
+            existingTask.setStatus(task.getStatus());
+            System.out.println("更新状态为: " + task.getStatus());
+        }
+        if (task.getProgress() != null) {
+            existingTask.setProgress(task.getProgress());
+            System.out.println("更新进度为: " + task.getProgress());
+        }
+        if (task.getName() != null) {
+            existingTask.setName(task.getName());
+        }
+        if (task.getDescription() != null) {
+            existingTask.setDescription(task.getDescription());
+        }
+        if (task.getPriority() != null) {
+            existingTask.setPriority(task.getPriority());
+        }
+        if (task.getStartDate() != null) {
+            existingTask.setStartDate(task.getStartDate());
+        }
+        if (task.getEndDate() != null) {
+            existingTask.setEndDate(task.getEndDate());
+        }
+        if (task.getAssignedTo() != null) {
+            existingTask.setAssignedTo(task.getAssignedTo());
+        }
+        
+        updateById(existingTask);
+        return existingTask;
     }
 
     public void removeById(Integer id) {

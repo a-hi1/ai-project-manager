@@ -57,7 +57,7 @@ public class UserService extends ServiceImpl<UserMapper, User> {
                 return null;
             }
             logger.info("尝试生成 token...");
-            String token = jwtUtils.generateToken(username);
+            String token = jwtUtils.generateToken(username, user.getId());
             logger.info("UserService.login: success, token generated for username={}", username);
             return token;
         } catch (Exception e) {

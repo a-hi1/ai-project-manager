@@ -15,6 +15,10 @@ public class KnowledgeDocument {
     private Integer id;
     @TableField("project_id")
     private Integer projectId;
+    @TableField("user_id")
+    private Integer userId;
+    @TableField("file_name")
+    private String fileName;
     private String title;
     private String content;
     @TableField("doc_type")

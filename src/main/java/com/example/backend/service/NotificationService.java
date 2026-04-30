@@ -4,6 +4,7 @@ import com.example.backend.entity.Notification;
 import com.example.backend.mapper.NotificationMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,6 +14,10 @@ public class NotificationService {
     @Autowired
     private NotificationMapper notificationMapper;
 
+    @Autowired
+    private WebSocketService webSocketService;
+
+    @Transactional
     public Notification createNotification(Integer userId, String title, String content, String type) {
         Notification notification = new Notification();
         notification.setUserId(userId);
@@ -22,6 +27,11 @@ public class NotificationService {
         notification.setReadStatus(false);
         notification.setCreateTime(LocalDateTime.now());
         notificationMapper.insert(notification);
+
+        webSocketService.sendNotificationToUser(userId, notification);
+        int unreadCount = getUnreadCount(userId);
+        webSocketService.sendUnreadCountUpdate(userId, unreadCount);
+
         return notification;
     }
 
@@ -33,8 +43,21 @@ public class NotificationService {
         return notificationMapper.countUnreadByUserId(userId);
     }
 
+    @Transactional
     public void markAllAsRead(Integer userId) {
         notificationMapper.markAllAsRead(userId);
+        webSocketService.sendUnreadCountUpdate(userId, 0);
+    }
+
+    @Transactional
+    public void markAsRead(Integer notificationId, Integer userId) {
+        Notification notification = notificationMapper.selectById(notificationId);
+        if (notification != null && notification.getUserId().equals(userId)) {
+            notification.setReadStatus(true);
+            notificationMapper.updateById(notification);
+            int unreadCount = getUnreadCount(userId);
+            webSocketService.sendUnreadCountUpdate(userId, unreadCount);
+        }
     }
 
     public void sendTaskAssignedNotification(Integer userId, String taskName, String projectName) {
@@ -59,5 +82,17 @@ public class NotificationService {
         String title = "变更请求待审批";
         String content = String.format("项目 %s 有新的变更请求：%s，需要您审批", projectName, changeTitle);
         createNotification(userId, title, content, "change_request");
+    }
+
+    public void sendTaskProgressNotification(Integer userId, String taskName, String progress) {
+        String title = "任务进度更新";
+        String content = String.format("任务 %s 进度更新为 %s%%", taskName, progress);
+        createNotification(userId, title, content, "task_progress");
+    }
+
+    public void sendMilestoneNotification(Integer userId, String milestoneName, String projectName) {
+        String title = "里程碑提醒";
+        String content = String.format("项目 %s 的里程碑 %s 即将到达", projectName, milestoneName);
+        createNotification(userId, title, content, "milestone");
     }
 }

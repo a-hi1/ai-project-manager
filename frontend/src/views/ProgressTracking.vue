@@ -10,221 +10,259 @@
             </el-button>
             <h2>进度跟踪</h2>
           </div>
-          <el-button type="primary" @click="showTaskDialogFunc">
+          <el-button type="primary" @click="openCreateDialog" size="large">
             <el-icon><Plus /></el-icon>
             添加任务
           </el-button>
         </div>
       </template>
 
-      <el-row :gutter="20" class="stats-row">
+      <!-- 统计卡片 -->
+      <el-row :gutter="16" class="stats-row">
         <el-col :xs="12" :sm="6">
           <div class="stat-card">
-            <el-icon class="stat-icon"><Document /></el-icon>
+            <div class="stat-icon" style="background-color: #409eff15;">
+              <el-icon :size="24" color="#409eff"><List /></el-icon>
+            </div>
             <div class="stat-info">
-              <div class="stat-value">{{ tasks.length }}</div>
-              <div class="stat-label">总任务数</div>
+              <div class="stat-number">{{ tasks.length }}</div>
+              <div class="stat-label">总任务</div>
             </div>
           </div>
         </el-col>
         <el-col :xs="12" :sm="6">
           <div class="stat-card">
-            <el-icon class="stat-icon success"><CircleCheck /></el-icon>
-            <div class="stat-info">
-              <div class="stat-value">{{ completedTasksCount }}</div>
-              <div class="stat-label">已完成</div>
+            <div class="stat-icon" style="background-color: #e6a23c15;">
+              <el-icon :size="24" color="#e6a23c"><Loading /></el-icon>
             </div>
-          </div>
-        </el-col>
-        <el-col :xs="12" :sm="6">
-          <div class="stat-card">
-            <el-icon class="stat-icon warning"><Clock /></el-icon>
             <div class="stat-info">
-              <div class="stat-value">{{ inProgressTasksCount }}</div>
+              <div class="stat-number" style="color: #e6a23c;">{{ inProgressTasks.length }}</div>
               <div class="stat-label">进行中</div>
             </div>
           </div>
         </el-col>
         <el-col :xs="12" :sm="6">
           <div class="stat-card">
-            <el-icon class="stat-icon primary"><TrendCharts /></el-icon>
+            <div class="stat-icon" style="background-color: #67c23a15;">
+              <el-icon :size="24" color="#67c23a"><CircleCheck /></el-icon>
+            </div>
             <div class="stat-info">
-              <div class="stat-value">{{ projectProgress }}%</div>
-              <div class="stat-label">整体进度</div>
+              <div class="stat-number" style="color: #67c23a;">{{ completedTasks.length }}</div>
+              <div class="stat-label">已完成</div>
+            </div>
+          </div>
+        </el-col>
+        <el-col :xs="12" :sm="6">
+          <div class="stat-card">
+            <div class="stat-icon" style="background-color: #f56c6c15;">
+              <el-icon :size="24" color="#f56c6c"><Warning /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-number" style="color: #f56c6c;">{{ overdueTasks.length }}</div>
+              <div class="stat-label">已逾期</div>
             </div>
           </div>
         </el-col>
       </el-row>
 
-      <el-tabs v-model="activeTab">
-        <el-tab-pane label="任务列表" name="taskList">
-          <el-table :data="tasks" style="width: 100%" v-loading="loading" row-key="id" :tree-props="{ children: 'children' }">
-            <el-table-column prop="name" label="任务名称" min-width="250" />
-            <el-table-column prop="description" label="描述" min-width="150" show-overflow-tooltip />
-            <el-table-column label="父任务" width="150">
-              <template #default="scope">
-                <span v-if="scope.row.parentId" class="parent-task-tag">
-                  {{ getParentTaskName(scope.row.parentId) }}
-                </span>
-                <span v-else class="no-parent-tag">-</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="工期" width="100">
-              <template #default="scope">{{ scope.row.duration }}天</template>
-            </el-table-column>
-            <el-table-column prop="priority" label="优先级" width="100">
-              <template #default="scope">
-                <el-tag :type="getPriorityType(scope.row.priority)">{{ getPriorityName(scope.row.priority) }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="status" label="状态" width="100">
-              <template #default="scope">
-                <el-tag :type="getStatusType(scope.row.status)">{{ getStatusName(scope.row.status) }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="progress" label="进度" width="200">
-              <template #default="scope">
-                <el-progress :percentage="scope.row.progress || 0" :stroke-width="10" :status="scope.row.progress === 100 ? 'success' : undefined" />
-              </template>
-            </el-table-column>
-            <el-table-column label="日期范围" width="200">
-              <template #default="scope">
-                <div class="date-range">
-                  <div>{{ formatDate(scope.row.startDate) }}</div>
-                  <el-icon class="arrow"><ArrowRight /></el-icon>
-                  <div>{{ formatDate(scope.row.endDate) }}</div>
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="300" fixed="right">
-              <template #default="scope">
-                <el-button type="primary" size="small" @click="addSubTask(scope.row)">
-                  <el-icon><Plus /></el-icon>
-                  子任务
-                </el-button>
-                <el-button type="primary" size="small" @click="editTask(scope.row)">
-                  <el-icon><Edit /></el-icon>
-                  编辑
-                </el-button>
-                <el-button type="success" size="small" @click="showWorkLogDialog(scope.row)">
-                  <el-icon><Document /></el-icon>
-                  工时
-                </el-button>
-                <el-button type="danger" size="small" @click="deleteTask(scope.row.id)">
-                  <el-icon><Delete /></el-icon>
-                  删除
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-tab-pane>
+      <!-- 搜索栏 -->
+      <div class="search-bar">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索任务名称..."
+          clearable
+          prefix-icon="Search"
+          style="width: 300px"
+          @input="handleSearch"
+        />
+        <el-select v-model="filterStatus" placeholder="筛选状态" clearable style="width: 150px" @change="handleSearch">
+          <el-option label="全部" value="" />
+          <el-option label="待处理" value="todo">
+            <el-tag size="small" type="info">待处理</el-tag>
+          </el-option>
+          <el-option label="进行中" value="in_progress">
+            <el-tag size="small" type="warning">进行中</el-tag>
+          </el-option>
+          <el-option label="待审核" value="review">
+            <el-tag size="small" type="primary">待审核</el-tag>
+          </el-option>
+          <el-option label="已完成" value="done">
+            <el-tag size="small" type="success">已完成</el-tag>
+          </el-option>
+        </el-select>
+      </div>
 
-        <el-tab-pane label="工时记录" name="workLogs">
-          <el-table :data="workLogs" style="width: 100%" v-loading="loading">
-            <el-table-column prop="id" label="ID" width="80" />
-            <el-table-column prop="taskName" label="任务名称" min-width="150" />
-            <el-table-column prop="hours" label="工时" width="100">
-              <template #default="scope">{{ scope.row.hours }} 小时</template>
-            </el-table-column>
-            <el-table-column prop="workDate" label="工作日期" width="120">
-              <template #default="scope">{{ formatDate(scope.row.workDate) }}</template>
-            </el-table-column>
-            <el-table-column prop="description" label="工作描述" show-overflow-tooltip />
-          </el-table>
-        </el-tab-pane>
-      </el-tabs>
+      <!-- 任务表格 -->
+      <el-table 
+        :data="filteredTasks" 
+        style="width: 100%" 
+        v-loading="loading"
+        :empty-text="searchKeyword || filterStatus ? '没有找到匹配的任务' : '暂无任务，点击右上角添加新任务'"
+        stripe
+        border
+      >
+        <el-table-column prop="id" label="ID" width="70" align="center" />
+        <el-table-column prop="name" label="任务名称" min-width="180">
+          <template #default="scope">
+            <div class="task-name-cell">
+              <el-icon :size="16" color="#409eff"><List /></el-icon>
+              <span>{{ scope.row.name }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="status" label="状态" width="110" align="center">
+          <template #default="scope">
+            <el-tag :type="getStatusType(scope.row.status)" effect="light" round size="small">
+              {{ getStatusName(scope.row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="priority" label="优先级" width="90" align="center">
+          <template #default="scope">
+            <el-tag :type="getPriorityType(scope.row.priority)" effect="light" size="small">
+              {{ getPriorityName(scope.row.priority) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="进度" width="160" align="center">
+          <template #default="scope">
+            <el-progress 
+              :percentage="scope.row.progress || 0" 
+              :status="scope.row.status === 'done' ? 'success' : ''"
+              :stroke-width="8"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column label="工时" width="120" align="center">
+          <template #default="scope">
+            <div class="work-hours-cell">
+              <el-icon :size="14" color="#909399"><Timer /></el-icon>
+              <span>{{ scope.row.actualHours || 0 }} / {{ scope.row.estimatedHours || 0 }} h</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="260" fixed="right" align="center">
+          <template #default="scope">
+            <el-button type="primary" size="small" plain @click="editTask(scope.row)">
+              <el-icon><Edit /></el-icon>
+              编辑
+            </el-button>
+            <el-button type="warning" size="small" plain @click="reportHours(scope.row)">
+              <el-icon><Timer /></el-icon>
+              工时
+            </el-button>
+            <el-button type="danger" size="small" plain @click="deleteTask(scope.row.id)">
+              <el-icon><Delete /></el-icon>
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 -->
+      <el-pagination
+        v-if="filteredTasks.length > 0"
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :page-sizes="[10, 20, 50]"
+        layout="total, sizes, prev, pager, next"
+        :total="filteredTasks.length"
+        class="pagination"
+      />
     </el-card>
 
-    <!-- 添加/编辑任务对话框 -->
-    <el-dialog v-model="showTaskDialog" :title="isEditTask ? '编辑任务' : '添加任务'" width="700px">
-      <el-form :model="taskForm" label-width="120px">
+    <!-- 创建/编辑任务对话框 -->
+    <el-dialog 
+      v-model="showCreateDialog" 
+      :title="isEdit ? '编辑任务' : '添加任务'" 
+      width="600px"
+      destroy-on-close
+    >
+      <el-form :model="taskForm" label-width="100px" :rules="formRules" ref="formRef">
         <el-form-item label="任务名称" prop="name">
-          <el-input v-model="taskForm.name" placeholder="请输入任务名称" />
+          <el-input v-model="taskForm.name" placeholder="请输入任务名称" maxlength="100" show-word-limit />
         </el-form-item>
         <el-form-item label="任务描述" prop="description">
-          <el-input v-model="taskForm.description" type="textarea" :rows="3" placeholder="请输入任务描述" />
+          <el-input 
+            v-model="taskForm.description" 
+            type="textarea" 
+            :rows="3" 
+            placeholder="请输入任务描述"
+            maxlength="500"
+            show-word-limit
+          />
         </el-form-item>
-        <el-form-item label="父任务" prop="parentId">
-          <el-select v-model="taskForm.parentId" placeholder="请选择父任务（可选）" clearable style="width: 100%">
-            <el-option label="无（顶级任务）" :value="null" />
-            <el-option 
-              v-for="task in availableParentTasks" 
-              :key="task.id" 
-              :label="task.name" 
-              :value="task.id" 
+        <el-form-item label="任务状态" prop="status">
+          <el-select v-model="taskForm.status" style="width: 100%">
+            <el-option label="待处理" value="todo">
+              <el-tag size="small" type="info">待处理</el-tag>
+            </el-option>
+            <el-option label="进行中" value="in_progress">
+              <el-tag size="small" type="warning">进行中</el-tag>
+            </el-option>
+            <el-option label="待审核" value="review">
+              <el-tag size="small" type="primary">待审核</el-tag>
+            </el-option>
+            <el-option label="已完成" value="done">
+              <el-tag size="small" type="success">已完成</el-tag>
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="优先级" prop="priority">
+          <el-select v-model="taskForm.priority" style="width: 100%">
+            <el-option label="高" value="high">
+              <el-tag size="small" type="danger">高</el-tag>
+            </el-option>
+            <el-option label="中" value="medium">
+              <el-tag size="small" type="warning">中</el-tag>
+            </el-option>
+            <el-option label="低" value="low">
+              <el-tag size="small" type="info">低</el-tag>
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="进度">
+          <el-slider v-model="taskForm.progress" :min="0" :max="100" show-input />
+        </el-form-item>
+        <el-form-item label="预计工时">
+          <el-input-number v-model="taskForm.estimatedHours" :min="0" :max="999" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="负责人">
+          <el-select v-model="taskForm.assignedTo" placeholder="选择负责人" style="width: 100%" clearable>
+            <el-option
+              v-for="user in users"
+              :key="user.id"
+              :label="user.username"
+              :value="user.id"
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="开始日期">
-          <el-date-picker 
-            v-model="taskForm.startDate" 
-            type="date" 
-            placeholder="选择开始日期" 
-            style="width: 100%" 
-            @change="calculateDuration" 
-          />
-        </el-form-item>
-        <el-form-item label="结束日期">
-          <el-date-picker 
-            v-model="taskForm.endDate" 
-            type="date" 
-            placeholder="选择结束日期" 
-            style="width: 100%" 
-            @change="calculateDuration" 
-          />
-        </el-form-item>
-        <el-form-item label="工期（天）">
-          <el-input-number 
-            v-model="taskForm.duration" 
-            :min="1" 
-            style="width: 100%" 
-            @change="calculateEndDate" 
-          />
-        </el-form-item>
-        <el-form-item label="优先级" prop="priority">
-          <el-select v-model="taskForm.priority" placeholder="请选择优先级" style="width: 100%">
-            <el-option label="高" value="high" />
-            <el-option label="中" value="medium" />
-            <el-option label="低" value="low" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-select v-model="taskForm.status" placeholder="请选择状态" style="width: 100%">
-            <el-option label="待处理" value="todo" />
-            <el-option label="进行中" value="in_progress" />
-            <el-option label="待审核" value="review" />
-            <el-option label="已完成" value="done" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="进度" prop="progress">
-          <el-slider v-model="taskForm.progress" :min="0" :max="100" show-input />
-        </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showTaskDialog = false">取消</el-button>
-        <el-button type="primary" @click="saveTask" :loading="saving">保存</el-button>
+        <el-button @click="showCreateDialog = false">取消</el-button>
+        <el-button type="primary" @click="saveTask" :loading="saving">
+          {{ isEdit ? '保存修改' : '确认添加' }}
+        </el-button>
       </template>
     </el-dialog>
 
-    <!-- 填报工时对话框 -->
-    <el-dialog v-model="showWorkLogDialogVisible" title="填报工时" width="500px">
-      <el-form :model="workLogForm" label-width="100px">
+    <!-- 工时填报对话框 -->
+    <el-dialog v-model="showHoursDialog" title="工时填报" width="500px" destroy-on-close>
+      <el-form :model="hoursForm" label-width="100px">
         <el-form-item label="任务名称">
-          <el-input v-model="workLogForm.taskName" disabled />
+          <el-input v-model="hoursForm.taskName" disabled />
         </el-form-item>
-        <el-form-item label="工时（小时）">
-          <el-input-number v-model="workLogForm.hours" :min="0.5" :max="24" :step="0.5" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="工作日期">
-          <el-date-picker v-model="workLogForm.workDate" type="date" placeholder="选择日期" style="width: 100%" />
+        <el-form-item label="本次工时">
+          <el-input-number v-model="hoursForm.hours" :min="0.5" :max="24" :step="0.5" style="width: 100%" />
         </el-form-item>
         <el-form-item label="工作描述">
-          <el-input v-model="workLogForm.description" type="textarea" :rows="3" placeholder="请输入工作描述" />
+          <el-input v-model="hoursForm.description" type="textarea" :rows="3" placeholder="描述本次工作内容" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showWorkLogDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitWorkLog" :loading="saving">提交</el-button>
+        <el-button @click="showHoursDialog = false">取消</el-button>
+        <el-button type="primary" @click="saveHours" :loading="savingHours">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -234,298 +272,84 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { ArrowLeft, Plus, Edit, Delete, Document, CircleCheck, Clock, TrendCharts, ArrowRight } from '@element-plus/icons-vue';
+import { 
+  ArrowLeft, Plus, Edit, Delete, Search, List, Timer, 
+  Loading, CircleCheck, Warning 
+} from '@element-plus/icons-vue';
 
 const route = useRoute();
 const router = useRouter();
 const projectId = Number(route.params.id);
-
 const tasks = ref<any[]>([]);
-const workLogs = ref<any[]>([]);
+const users = ref<any[]>([]);
 const loading = ref(false);
 const saving = ref(false);
-const activeTab = ref('taskList');
-const showTaskDialog = ref(false);
-const showWorkLogDialogVisible = ref(false);
-const isEditTask = ref(false);
+const savingHours = ref(false);
+const showCreateDialog = ref(false);
+const showHoursDialog = ref(false);
+const isEdit = ref(false);
+const searchKeyword = ref('');
+const filterStatus = ref('');
+const currentPage = ref(1);
+const pageSize = ref(10);
+const formRef = ref();
 
 const taskForm = ref({
   id: null,
   projectId: projectId,
-  parentId: null,
   name: '',
   description: '',
-  startDate: '',
-  endDate: '',
-  duration: 7,
-  priority: 'medium',
   status: 'todo',
+  priority: 'medium',
   progress: 0,
-  createdBy: null
+  estimatedHours: 0,
+  actualHours: 0,
+  assignedTo: null,
+  creatorId: null
 });
 
-const workLogForm = ref({
+const hoursForm = ref({
   taskId: null,
   taskName: '',
   hours: 1,
-  workDate: new Date(),
   description: ''
 });
 
-const currentUserId = computed(() => {
-  const user = localStorage.getItem('user');
-  return user ? JSON.parse(user).id : null;
+const formRules = {
+  name: [
+    { required: true, message: '请输入任务名称', trigger: 'blur' },
+    { min: 2, max: 100, message: '任务名称长度应在 2-100 个字符之间', trigger: 'blur' }
+  ],
+  status: [
+    { required: true, message: '请选择任务状态', trigger: 'change' }
+  ],
+  priority: [
+    { required: true, message: '请选择优先级', trigger: 'change' }
+  ]
+};
+
+const inProgressTasks = computed(() => tasks.value.filter(t => t.status === 'in_progress'));
+const completedTasks = computed(() => tasks.value.filter(t => t.status === 'done'));
+const overdueTasks = computed(() => tasks.value.filter(t => {
+  if (t.status === 'done') return false;
+  if (!t.endDate) return false;
+  return new Date(t.endDate) < new Date();
+}));
+
+const filteredTasks = computed(() => {
+  let result = tasks.value;
+  
+  if (searchKeyword.value) {
+    const keyword = searchKeyword.value.toLowerCase();
+    result = result.filter(t => t.name?.toLowerCase().includes(keyword));
+  }
+  
+  if (filterStatus.value) {
+    result = result.filter(t => t.status === filterStatus.value);
+  }
+  
+  return result;
 });
-
-const availableParentTasks = computed(() => {
-  if (!taskForm.value.id) {
-    return tasks.value;
-  }
-  return tasks.value.filter(t => t.id !== taskForm.value.id);
-});
-
-const completedTasksCount = computed(() => {
-  return tasks.value.filter(t => t.status === 'done').length;
-});
-
-const inProgressTasksCount = computed(() => {
-  return tasks.value.filter(t => t.status === 'in_progress').length;
-});
-
-const projectProgress = computed(() => {
-  if (tasks.value.length === 0) return 0;
-  const totalProgress = tasks.value.reduce((sum, t) => sum + (t.progress || 0), 0);
-  return Math.round(totalProgress / tasks.value.length);
-});
-
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-};
-
-const getParentTaskName = (parentId: number) => {
-  const parentTask = tasks.value.find(t => t.id === parentId);
-  return parentTask ? parentTask.name : '-';
-};
-
-const calculateDuration = () => {
-  if (taskForm.value.startDate && taskForm.value.endDate) {
-    const start = new Date(taskForm.value.startDate);
-    const end = new Date(taskForm.value.endDate);
-    const diffTime = end.getTime() - start.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    taskForm.value.duration = diffDays > 0 ? diffDays : 1;
-  }
-};
-
-const calculateEndDate = () => {
-  if (taskForm.value.startDate && taskForm.value.duration) {
-    const start = new Date(taskForm.value.startDate);
-    const end = new Date(start);
-    end.setDate(start.getDate() + taskForm.value.duration - 1);
-    taskForm.value.endDate = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
-  }
-};
-
-const fetchTasks = async () => {
-  loading.value = true;
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:8080/api/task/project/${projectId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
-    console.log('任务列表响应:', result);
-    if (result.success) {
-      tasks.value = result.data || [];
-    } else {
-      ElMessage.error(result.message || '获取任务失败');
-    }
-  } catch (error) {
-    console.error('获取任务错误:', error);
-    ElMessage.error('网络错误，请稍后重试');
-  } finally {
-    loading.value = false;
-  }
-};
-
-const fetchWorkLogs = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:8080/api/work-log/user/${currentUserId.value}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
-    if (result.success) {
-      workLogs.value = result.data || [];
-    }
-  } catch (error) {
-    console.error('获取工时记录错误:', error);
-  }
-};
-
-const resetTaskForm = () => {
-  taskForm.value = {
-    id: null,
-    projectId: projectId,
-    parentId: null,
-    name: '',
-    description: '',
-    startDate: '',
-    endDate: '',
-    duration: 7,
-    priority: 'medium',
-    status: 'todo',
-    progress: 0,
-    createdBy: null
-  };
-};
-
-const showTaskDialogFunc = () => {
-  isEditTask.value = false;
-  resetTaskForm();
-  showTaskDialog.value = true;
-};
-
-const addSubTask = (parentTask: any) => {
-  isEditTask.value = false;
-  resetTaskForm();
-  taskForm.value.parentId = parentTask.id;
-  taskForm.value.name = '';
-  if (parentTask.startDate) {
-    taskForm.value.startDate = parentTask.startDate;
-    const start = new Date(parentTask.startDate);
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    taskForm.value.endDate = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
-    taskForm.value.duration = 7;
-  }
-  showTaskDialog.value = true;
-};
-
-const editTask = (task: any) => {
-  isEditTask.value = true;
-  taskForm.value = { ...task };
-  showTaskDialog.value = true;
-};
-
-const saveTask = async () => {
-  if (!taskForm.value.name) {
-    ElMessage.warning('请输入任务名称');
-    return;
-  }
-
-  saving.value = true;
-  try {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      taskForm.value.createdBy = JSON.parse(userStr).id;
-    }
-
-    const url = isEditTask.value ? 'http://localhost:8080/api/task/update' : 'http://localhost:8080/api/task/create';
-    const method = isEditTask.value ? 'PUT' : 'POST';
-
-    console.log('提交任务数据:', taskForm.value);
-
-    const token = localStorage.getItem('token');
-    const response = await fetch(url, {
-      method: method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(taskForm.value)
-    });
-    const result = await response.json();
-    console.log('保存任务响应:', result);
-    if (result.success) {
-      ElMessage.success(isEditTask.value ? '更新任务成功' : '添加任务成功');
-      showTaskDialog.value = false;
-      await fetchTasks();
-    } else {
-      ElMessage.error(result.message || '操作失败');
-    }
-  } catch (error) {
-    console.error('保存任务错误:', error);
-    ElMessage.error('网络错误，请稍后重试');
-  } finally {
-    saving.value = false;
-  }
-};
-
-const deleteTask = async (id: number) => {
-  try {
-    await ElMessageBox.confirm('确认删除此任务？此操作不可撤销！', '提示', {
-      confirmButtonText: '确认',
-      cancelButtonText: '取消',
-      type: 'warning'
-    });
-
-    const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:8080/api/task/delete/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
-    if (result.success) {
-      ElMessage.success('删除任务成功');
-      await fetchTasks();
-    } else {
-      ElMessage.error(result.message || '删除失败');
-    }
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('网络错误，请稍后重试');
-    }
-  }
-};
-
-const showWorkLogDialog = (task: any) => {
-  workLogForm.value = {
-    taskId: task.id,
-    taskName: task.name,
-    hours: 1,
-    workDate: new Date(),
-    description: ''
-  };
-  showWorkLogDialogVisible.value = true;
-};
-
-const submitWorkLog = async () => {
-  saving.value = true;
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:8080/api/work-log/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        taskId: workLogForm.value.taskId,
-        userId: currentUserId.value,
-        hours: workLogForm.value.hours,
-        workDate: workLogForm.value.workDate,
-        description: workLogForm.value.description
-      })
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      ElMessage.success('工时填报成功');
-      showWorkLogDialogVisible.value = false;
-      await fetchWorkLogs();
-    } else {
-      ElMessage.error(result.message || '填报失败');
-    }
-  } catch (error) {
-    console.error('提交工时错误:', error);
-    ElMessage.error('网络错误，请稍后重试');
-  } finally {
-    saving.value = false;
-  }
-};
 
 const getStatusType = (status: string) => {
   const typeMap: Record<string, string> = {
@@ -565,9 +389,185 @@ const getPriorityName = (priority: string) => {
   return nameMap[priority] || priority;
 };
 
+const handleSearch = () => {
+  currentPage.value = 1;
+};
+
+const openCreateDialog = () => {
+  isEdit.value = false;
+  resetForm();
+  showCreateDialog.value = true;
+};
+
+const fetchTasks = async () => {
+  loading.value = true;
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`http://localhost:8080/api/task/project/${projectId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const result = await response.json();
+    if (result.success) {
+      tasks.value = result.data || [];
+    } else {
+      ElMessage.error(result.message || '获取任务列表失败');
+    }
+  } catch (error) {
+    ElMessage.error('网络错误，请稍后重试');
+  } finally {
+    loading.value = false;
+  }
+};
+
+const fetchUsers = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:8080/api/role/list', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const result = await response.json();
+    if (result.success) {
+      users.value = result.data || [];
+    }
+  } catch (error) {
+    console.error('获取用户列表失败');
+  }
+};
+
+const saveTask = async () => {
+  const valid = await formRef.value?.validate().catch(() => false);
+  if (!valid) return;
+
+  saving.value = true;
+  try {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      taskForm.value.creatorId = user.id;
+    }
+    taskForm.value.projectId = projectId;
+
+    const url = isEdit.value ? 'http://localhost:8080/api/task/update' : 'http://localhost:8080/api/task/create';
+    const method = isEdit.value ? 'PUT' : 'POST';
+
+    const response = await fetch(url, {
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(taskForm.value)
+    });
+    const result = await response.json();
+    if (result.success) {
+      ElMessage.success(isEdit.value ? '编辑任务成功' : '添加任务成功');
+      showCreateDialog.value = false;
+      resetForm();
+      await fetchTasks();
+    } else {
+      ElMessage.error(result.message || (isEdit.value ? '编辑任务失败' : '添加任务失败'));
+    }
+  } catch (error) {
+    ElMessage.error('网络错误，请稍后重试');
+  } finally {
+    saving.value = false;
+  }
+};
+
+const editTask = (task: any) => {
+  isEdit.value = true;
+  taskForm.value = { ...task };
+  showCreateDialog.value = true;
+};
+
+const deleteTask = async (id: number) => {
+  try {
+    await ElMessageBox.confirm('确认删除此任务？此操作不可撤销！', '提示', {
+      confirmButtonText: '确认',
+      cancelButtonText: '取消',
+      type: 'warning'
+    });
+
+    const token = localStorage.getItem('token');
+    const response = await fetch(`http://localhost:8080/api/task/delete/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const result = await response.json();
+    if (result.success) {
+      ElMessage.success('删除任务成功');
+      await fetchTasks();
+    } else {
+      ElMessage.error(result.message || '删除任务失败');
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('网络错误，请稍后重试');
+    }
+  }
+};
+
+const reportHours = (task: any) => {
+  hoursForm.value = {
+    taskId: task.id,
+    taskName: task.name,
+    hours: 1,
+    description: ''
+  };
+  showHoursDialog.value = true;
+};
+
+const saveHours = async () => {
+  savingHours.value = true;
+  try {
+    const task = tasks.value.find(t => t.id === hoursForm.value.taskId);
+    if (task) {
+      task.actualHours = (task.actualHours || 0) + hoursForm.value.hours;
+      
+      const response = await fetch('http://localhost:8080/api/task/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(task)
+      });
+      const result = await response.json();
+      if (result.success) {
+        ElMessage.success('工时填报成功');
+        showHoursDialog.value = false;
+        await fetchTasks();
+      } else {
+        ElMessage.error(result.message || '工时填报失败');
+      }
+    }
+  } catch (error) {
+    ElMessage.error('网络错误，请稍后重试');
+  } finally {
+    savingHours.value = false;
+  }
+};
+
+const resetForm = () => {
+  taskForm.value = {
+    id: null,
+    projectId: projectId,
+    name: '',
+    description: '',
+    status: 'todo',
+    priority: 'medium',
+    progress: 0,
+    estimatedHours: 0,
+    actualHours: 0,
+    assignedTo: null,
+    creatorId: null
+  };
+  isEdit.value = false;
+};
+
 onMounted(() => {
   fetchTasks();
-  fetchWorkLogs();
+  fetchUsers();
 });
 </script>
 
@@ -587,7 +587,7 @@ onMounted(() => {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
 }
 
 .header-left h2 {
@@ -598,65 +598,87 @@ onMounted(() => {
 }
 
 .stats-row {
-  margin: 20px 0;
+  margin-bottom: 24px;
 }
 
 .stat-card {
   background: #fff;
-  border-radius: 8px;
-  padding: 20px;
+  border-radius: 12px;
+  padding: 16px;
   display: flex;
   align-items: center;
-  gap: 15px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .stat-icon {
-  font-size: 32px;
-  color: #409eff;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.stat-icon.success {
-  color: #67c23a;
+.stat-info {
+  flex: 1;
 }
 
-.stat-icon.warning {
-  color: #e6a23c;
-}
-
-.stat-icon.primary {
-  color: #409eff;
-}
-
-.stat-value {
+.stat-number {
   font-size: 24px;
   font-weight: 700;
-  color: #303133;
+  color: #409eff;
+  line-height: 1;
+  margin-bottom: 4px;
 }
 
 .stat-label {
-  font-size: 14px;
+  font-size: 12px;
   color: #909399;
 }
 
-.date-range {
+.search-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.task-name-cell {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.work-hours-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #606266;
   font-size: 13px;
 }
 
-.date-range .arrow {
-  color: #909399;
+.pagination {
+  margin-top: 20px;
+  justify-content: flex-end;
 }
 
-.parent-task-tag {
-  color: #409eff;
-  font-size: 13px;
-}
-
-.no-parent-tag {
-  color: #909399;
-  font-size: 13px;
+/* 响应式 */
+@media (max-width: 768px) {
+  .search-bar {
+    flex-direction: column;
+  }
+  .search-bar .el-input,
+  .search-bar .el-select {
+    width: 100% !important;
+  }
 }
 </style>

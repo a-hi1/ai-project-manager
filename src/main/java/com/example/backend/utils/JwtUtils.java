@@ -34,6 +34,38 @@ public class JwtUtils {
                 .compact();
     }
     
+    public String generateToken(String username, Integer userId) {
+        Date now = new Date();
+        Date expireDate = new Date(now.getTime() + expiration);
+        
+        return Jwts.builder()
+                .subject(username)
+                .claim("userId", userId)
+                .issuedAt(now)
+                .expiration(expireDate)
+                .signWith(getSigningKey())
+                .compact();
+    }
+    
+    public Integer getUserIdFromToken(String authHeader) {
+        try {
+            String token = authHeader;
+            if (token != null && token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+            Claims claims = getClaimsFromToken(token);
+            Object userId = claims.get("userId");
+            if (userId instanceof Integer) {
+                return (Integer) userId;
+            } else if (userId instanceof Long) {
+                return ((Long) userId).intValue();
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    
     public Claims getClaimsFromToken(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())

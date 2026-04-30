@@ -1,7 +1,8 @@
 package com.example.backend.service;
 
-import com.example.backend.entity.Task;
-import com.example.backend.mapper.TaskMapper;
+import com.example.backend.entity.*;
+import com.example.backend.mapper.*;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -9,17 +10,38 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 public class AiService {
     private final ChatLanguageModel chatModel;
     private final TaskMapper taskMapper;
+    private final ProjectMapper projectMapper;
+    private final TaskService taskService;
+    private final RiskService riskService;
+    private final BugService bugService;
+    private final WorkLogService workLogService;
+    private final ChangeRequestService changeRequestService;
+    private final DeliverableService deliverableService;
+    private final ProjectRetrospectiveService retrospectiveService;
 
     @Autowired
-    public AiService(ChatLanguageModel chatModel, TaskMapper taskMapper) {
+    public AiService(ChatLanguageModel chatModel, TaskMapper taskMapper, 
+                   ProjectMapper projectMapper, TaskService taskService,
+                   RiskService riskService, BugService bugService,
+                   WorkLogService workLogService, ChangeRequestService changeRequestService,
+                   DeliverableService deliverableService, ProjectRetrospectiveService retrospectiveService) {
         this.chatModel = chatModel;
         this.taskMapper = taskMapper;
+        this.projectMapper = projectMapper;
+        this.taskService = taskService;
+        this.riskService = riskService;
+        this.bugService = bugService;
+        this.workLogService = workLogService;
+        this.changeRequestService = changeRequestService;
+        this.deliverableService = deliverableService;
+        this.retrospectiveService = retrospectiveService;
     }
 
     public String chat(String message) {
@@ -32,50 +54,90 @@ public class AiService {
 
     public String parseRequirementDocument(String content) {
         String prompt = """
-            你是一个需求分析专家。请分析以下需求文档，提取功能点、业务规则，并检测潜在的需求冲突。
+                你是一个专业的需求分析专家。请分析以下需求文档，提取功能点、业务规则，并检测潜在的需求冲突，最后给出优化建议。
 
-            需求文档内容：
-            %s
+                需求文档内容：
+                %s
 
-            请以JSON格式返回，格式如下：
-            {
-                "功能点": ["功能点1", "功能点2", ...],
-                "业务规则": ["规则1", "规则2", ...],
-                "需求冲突": ["冲突1", "冲突2", ...],
-                "优化建议": ["建议1", "建议2", ...]
-            }
-            """.formatted(content);
+                请严格以JSON格式返回结果，不要包含任何其他文字说明。JSON格式如下：
+                {
+                  "功能点": ["功能1描述", "功能2描述"],
+                  "业务规则": ["规则1描述", "规则2描述"],
+                  "需求冲突": ["冲突1描述", "冲突2描述"],
+                  "优化建议": ["建议1描述", "建议2描述"]
+                }
+                
+                确保返回的是纯JSON字符串，不包含任何markdown格式标记。
+                """.formatted(content);
 
-        return chatModel.generate(prompt);
+        try {
+            String result = chatModel.generate(prompt);
+            System.out.println("AI返回的原始结果: " + result);
+            return result;
+        } catch (Exception e) {
+            System.err.println("调用AI服务失败: " + e.getMessage());
+            e.printStackTrace();
+            // 返回一个友好的错误信息
+            return """
+                    {
+                      "功能点": ["AI服务暂时不可用，请稍后再试"],
+                      "业务规则": ["请检查API配置或网络连接"],
+                      "需求冲突": [],
+                      "优化建议": ["确保智谱AI API Key配置正确", "检查网络连接是否正常"]
+                    }
+                    """;
+        }
     }
 
     public String splitTask(String requirement) {
         String prompt = """
-            你是一个项目经理。请根据以下需求，自动拆分成WBS任务结构，识别任务间的依赖关系。
+                你是一个资深的项目经理。请根据以下需求，自动拆分成WBS任务结构，识别任务间的依赖关系。
 
-            需求内容：
-            %s
+                需求内容：
+                %s
 
-            请以JSON格式返回，格式如下：
-            {
-                "任务列表": [
+                请严格以JSON格式返回结果，不要包含任何其他文字说明。JSON格式如下：
+                {
+                  "任务列表": [
                     {
-                        "任务名称": "任务1",
-                        "描述": "任务描述",
-                        "工期": 3,
-                        "前置任务": []
+                      "任务名称": "任务1名称",
+                      "描述": "任务1详细描述",
+                      "工期": 3,
+                      "前置任务": []
                     },
                     {
-                        "任务名称": "任务2",
-                        "描述": "任务描述",
-                        "工期": 2,
-                        "前置任务": ["任务1"]
+                      "任务名称": "任务2名称",
+                      "描述": "任务2详细描述",
+                      "工期": 2,
+                      "前置任务": ["任务1名称"]
                     }
-                ]
-            }
-            """.formatted(requirement);
+                  ]
+                }
+                
+                确保返回的是纯JSON字符串，不包含任何markdown格式标记。
+                """.formatted(requirement);
 
-        return chatModel.generate(prompt);
+        try {
+            String result = chatModel.generate(prompt);
+            System.out.println("AI拆分任务返回的原始结果: " + result);
+            return result;
+        } catch (Exception e) {
+            System.err.println("调用AI拆分任务服务失败: " + e.getMessage());
+            e.printStackTrace();
+            // 返回一个友好的错误信息
+            return """
+                    {
+                      "任务列表": [
+                        {
+                          "任务名称": "AI服务暂时不可用",
+                          "描述": "请检查API配置或网络连接",
+                          "工期": 1,
+                          "前置任务": []
+                        }
+                      ]
+                    }
+                    """;
+        }
     }
 
     public String analyzeProjectStatus(Integer projectId) {
@@ -223,4 +285,191 @@ public class AiService {
     ) {}
 
     public record SmartFormFill(String aiSuggestion) {}
+
+    public String getProjectContext(Integer projectId) {
+        StringBuilder context = new StringBuilder();
+        
+        Project project = projectMapper.selectById(projectId);
+        if (project != null) {
+            context.append("【项目信息】\n");
+            context.append("项目名称: ").append(project.getName()).append("\n");
+            context.append("项目描述: ").append(project.getDescription()).append("\n");
+            context.append("项目状态: ").append(project.getStatus()).append("\n");
+            context.append("开始日期: ").append(project.getStartDate()).append("\n");
+            context.append("结束日期: ").append(project.getEndDate()).append("\n\n");
+        }
+
+        List<Task> tasks = taskService.getTasksByProjectIdList(projectId);
+        if (!tasks.isEmpty()) {
+            context.append("【任务信息】\n");
+            long totalTasks = tasks.size();
+            long doneTasks = tasks.stream().filter(t -> "done".equals(t.getStatus())).count();
+            long inProgressTasks = tasks.stream().filter(t -> "in_progress".equals(t.getStatus())).count();
+            long todoTasks = tasks.stream().filter(t -> "todo".equals(t.getStatus())).count();
+            long reviewTasks = tasks.stream().filter(t -> "review".equals(t.getStatus())).count();
+            
+            context.append("总任务数: ").append(totalTasks).append("\n");
+            context.append("已完成: ").append(doneTasks).append("\n");
+            context.append("进行中: ").append(inProgressTasks).append("\n");
+            context.append("待审核: ").append(reviewTasks).append("\n");
+            context.append("待处理: ").append(todoTasks).append("\n");
+            context.append("完成率: ").append(totalTasks > 0 ? String.format("%.1f", (double) doneTasks / totalTasks * 100) : 0).append("%\n");
+            
+            context.append("\n近期任务:\n");
+            tasks.stream()
+                .limit(10)
+                .forEach(t -> {
+                    context.append("- ").append(t.getName());
+                    if (t.getPriority() != null) {
+                        context.append(" (优先级: ").append(t.getPriority()).append(")");
+                    }
+                    context.append(" [").append(t.getStatus()).append("]\n");
+                });
+            context.append("\n");
+        }
+
+        List<Risk> risks = riskService.getRisksByProjectId(projectId);
+        if (!risks.isEmpty()) {
+            context.append("【风险信息】\n");
+            context.append("总风险数: ").append(risks.size()).append("\n");
+            long openRisks = risks.stream().filter(r -> "open".equals(r.getStatus())).count();
+            long monitoringRisks = risks.stream().filter(r -> "monitoring".equals(r.getStatus())).count();
+            long resolvedRisks = risks.stream().filter(r -> "resolved".equals(r.getStatus())).count();
+            
+            context.append("开放风险: ").append(openRisks).append("\n");
+            context.append("监控中: ").append(monitoringRisks).append("\n");
+            context.append("已解决: ").append(resolvedRisks).append("\n");
+            
+            if (openRisks > 0) {
+                context.append("主要风险:\n");
+                risks.stream()
+                    .filter(r -> "open".equals(r.getStatus()))
+                    .limit(5)
+                    .forEach(r -> {
+                        context.append("- ").append(r.getName());
+                        if (r.getProbability() != null && r.getImpact() != null) {
+                            context.append(" (概率: ").append(r.getProbability()).append("/10, 影响: ").append(r.getImpact()).append("/10)");
+                        }
+                        context.append("\n");
+                    });
+            }
+            context.append("\n");
+        }
+
+        List<Bug> bugs = bugService.getByProjectId(projectId);
+        if (!bugs.isEmpty()) {
+            context.append("【缺陷信息】\n");
+            context.append("总缺陷数: ").append(bugs.size()).append("\n");
+            long openBugs = bugs.stream().filter(b -> "open".equals(b.getStatus())).count();
+            long assignedBugs = bugs.stream().filter(b -> "assigned".equals(b.getStatus())).count();
+            long resolvedBugs = bugs.stream().filter(b -> "resolved".equals(b.getStatus())).count();
+            
+            context.append("开放缺陷: ").append(openBugs).append("\n");
+            context.append("已分配: ").append(assignedBugs).append("\n");
+            context.append("已解决: ").append(resolvedBugs).append("\n");
+            
+            if (openBugs > 0) {
+                context.append("主要缺陷:\n");
+                bugs.stream()
+                    .filter(b -> "open".equals(b.getStatus()))
+                    .limit(5)
+                    .forEach(b -> {
+                        context.append("- ").append(b.getTitle());
+                        if (b.getSeverity() != null) {
+                            context.append(" (严重程度: ").append(b.getSeverity()).append(")");
+                        }
+                        context.append("\n");
+                    });
+            }
+            context.append("\n");
+        }
+
+        context.append("【AI指令】\n");
+        context.append("你是一位经验丰富的项目经理助理，请根据以上项目信息帮助用户回答问题、分析情况、提供建议。\n");
+        context.append("如果用户询问项目相关问题，请结合上述数据给出专业、实用的回答。\n");
+        
+        return context.toString();
+    }
+
+    public String chatWithContext(String message, Integer projectId) {
+        String systemPrompt = "你是一位专业的AI项目管理助手，专注于帮助项目经理更好地管理项目。" +
+                            "你能够提供项目分析、任务建议、风险评估、进度跟踪等方面的帮助。" +
+                            "回答应该专业、实用、具体。";
+        
+        if (projectId != null) {
+            String projectContext = getProjectContext(projectId);
+            return chatModel.generate(systemPrompt + "\n\n" + projectContext + "\n\n用户问题: " + message);
+        } else {
+            return chatModel.generate(systemPrompt + "\n\n用户问题: " + message);
+        }
+    }
+
+    public String analyzeProjectHealth(Integer projectId) {
+        String context = getProjectContext(projectId);
+        String prompt = """
+            请基于以下项目信息，进行全面的项目健康度分析：
+            
+            %s
+            
+            请提供以下内容：
+            1. 项目整体健康度评分（0-100分）
+            2. 优势分析（至少3点）
+            3. 存在问题（至少3点）
+            4. 改进建议（具体、可操作）
+            5. 下一步行动建议
+            """.formatted(context);
+        
+        return chatModel.generate(prompt);
+    }
+
+    public String generateDailyReport(Integer projectId) {
+        String context = getProjectContext(projectId);
+        String prompt = """
+            请基于以下项目信息，生成一份简洁的项目日报：
+            
+            %s
+            
+            日报内容应包括：
+            1. 今日进展（任务完成情况）
+            2. 当前问题（风险和缺陷）
+            3. 明日计划
+            4. 需要协调的事项
+            """.formatted(context);
+        
+        return chatModel.generate(prompt);
+    }
+
+    public String suggestTasks(Integer projectId) {
+        String context = getProjectContext(projectId);
+        String prompt = """
+            请基于以下项目信息，分析当前项目状态并建议下一步优先处理的任务：
+            
+            %s
+            
+            请提供：
+            1. 3-5个优先级最高的建议任务
+            2. 每个任务的预期成果和时间安排
+            3. 建议的负责人角色
+            """.formatted(context);
+        
+        return chatModel.generate(prompt);
+    }
+
+    public String summarizeProject(Integer projectId) {
+        String context = getProjectContext(projectId);
+        String prompt = """
+            请基于以下项目信息，生成一份项目总结报告：
+            
+            %s
+            
+            总结内容应包括：
+            1. 项目概况（一句话介绍）
+            2. 当前进度概述
+            3. 项目亮点
+            4. 主要挑战
+            5. 关键建议
+            """.formatted(context);
+        
+        return chatModel.generate(prompt);
+    }
 }

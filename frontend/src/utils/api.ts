@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { ElMessage } from 'element-plus';
-import router from './router';
+import router from '../router';
 
 const apiClient = axios.create({
   baseURL: 'http://localhost:8080/api',

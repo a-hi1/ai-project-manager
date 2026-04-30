@@ -45,9 +45,20 @@ public class ProjectController {
     @PutMapping("/update")
     public Map<String, Object> updateProject(@RequestBody Project project) {
         try {
-            projectService.updateById(project);
-            return Map.of("success", true, "data", project);
+            Project existingProject = projectService.getById(project.getId());
+            if (existingProject == null) {
+                return Map.of("success", false, "message", "项目不存在");
+            }
+            if (project.getName() != null) existingProject.setName(project.getName());
+            if (project.getDescription() != null) existingProject.setDescription(project.getDescription());
+            if (project.getStartDate() != null) existingProject.setStartDate(project.getStartDate());
+            if (project.getEndDate() != null) existingProject.setEndDate(project.getEndDate());
+            if (project.getStatus() != null) existingProject.setStatus(project.getStatus());
+            
+            projectService.updateById(existingProject);
+            return Map.of("success", true, "data", existingProject);
         } catch (Exception e) {
+            e.printStackTrace();
             return Map.of("success", false, "message", e.getMessage());
         }
     }

@@ -122,6 +122,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { MagicStick, Check, Close, DocumentAdd, Star } from '@element-plus/icons-vue';
+import { getRoleType } from '../utils/rolePermission';
 
 const router = useRouter();
 const projectFormRef = ref();
@@ -298,11 +299,17 @@ const createProject = async () => {
 };
 
 onMounted(() => {
-  const user = localStorage.getItem('user');
-  if (user) {
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
     try {
-      const userData = JSON.parse(user);
+      const userData = JSON.parse(userStr);
       projectForm.value.createdBy = userData.id || 1;
+      
+      const currentRole = getRoleType(userData.roleId);
+      if (!['admin', 'pm'].includes(currentRole)) {
+        ElMessage.warning('您没有创建项目的权限');
+        router.push('/projects');
+      }
     } catch (e) {
       console.error('解析用户信息失败', e);
     }

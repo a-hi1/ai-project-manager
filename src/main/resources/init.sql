@@ -1,3 +1,8 @@
+-- =============================================
+-- 项目管理系统数据库初始化脚本
+-- 注意：此脚本可以安全重复运行，不会破坏现有数据
+-- =============================================
+
 -- 创建角色表
 CREATE TABLE IF NOT EXISTS role (
     id SERIAL PRIMARY KEY,
@@ -37,15 +42,16 @@ CREATE TABLE IF NOT EXISTS user_info (
     FOREIGN KEY (role_id) REFERENCES role(id)
 );
 
--- 插入初始角色
+-- 插入初始角色（如果不存在）
 INSERT INTO role (name, description) VALUES
 ('admin', 'System Administrator'),
 ('pm', 'Project Manager'),
 ('developer', 'Developer'),
 ('tester', 'Tester'),
-('guest', 'Guest');
+('guest', 'Guest')
+ON CONFLICT (name) DO NOTHING;
 
--- 插入初始权限
+-- 插入初始权限（如果不存在）
 INSERT INTO permission (name, description) VALUES
 ('user:manage', 'User Management'),
 ('project:create', 'Create Project'),
@@ -53,15 +59,17 @@ INSERT INTO permission (name, description) VALUES
 ('task:create', 'Create Task'),
 ('task:manage', 'Manage Task'),
 ('report:view', 'View Report'),
-('report:generate', 'Generate Report');
+('report:generate', 'Generate Report')
+ON CONFLICT (name) DO NOTHING;
 
--- 分配权限给角色
+-- 分配权限给角色（如果不存在）
 INSERT INTO role_permission (role_id, permission_id) VALUES
 (1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7),
 (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7),
 (3, 4), (3, 5), (3, 6),
 (4, 4), (4, 5), (4, 6),
-(5, 6);
+(5, 6)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- 创建项目表
 CREATE TABLE IF NOT EXISTS project (
@@ -84,10 +92,20 @@ CREATE TABLE IF NOT EXISTS project_member (
     user_id INTEGER NOT NULL,
     role VARCHAR(50) NOT NULL,
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (project_id, user_id),
     FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user_info(id) ON DELETE CASCADE
 );
+
+-- 添加唯一约束（如果不存在）
+DO $$
+BEGIN
+    BEGIN
+        ALTER TABLE project_member ADD CONSTRAINT uk_project_member_project_user UNIQUE (project_id, user_id);
+    EXCEPTION
+        WHEN duplicate_table OR duplicate_object THEN
+            NULL;
+    END;
+END $$;
 
 -- 创建需求调研表
 CREATE TABLE IF NOT EXISTS requirement_research (
@@ -316,13 +334,18 @@ CREATE TABLE IF NOT EXISTS project_retrospective (
     FOREIGN KEY (created_by) REFERENCES user_info(id)
 );
 
--- 插入初始用户（密码都是123456）
+-- 插入初始用户（如果不存在，密码都是123456）
 INSERT INTO user_info (username, password, email, role_id) VALUES
 ('admin', '123456', 'admin@example.com', 1),
 ('pm', '123456', 'pm@example.com', 2),
 ('developer', '123456', 'developer@example.com', 3),
 ('tester', '123456', 'tester@example.com', 4),
-('guest', '123456', 'guest@example.com', 5);
+('guest', '123456', 'guest@example.com', 5)
+ON CONFLICT (username) DO NOTHING;
+
+-- 确保 email 唯一约束也处理
+ALTER TABLE user_info DROP CONSTRAINT IF EXISTS user_info_email_key;
+ALTER TABLE user_info ADD CONSTRAINT user_info_email_key UNIQUE (email);
 
 -- 创建通知表
 CREATE TABLE IF NOT EXISTS notification (
@@ -356,3 +379,50 @@ CREATE TABLE IF NOT EXISTS operation_log (
 -- 操作日志表索引
 CREATE INDEX IF NOT EXISTS idx_operation_log_user_id ON operation_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_operation_log_create_time ON operation_log(create_time DESC);
+
+-- =========================================
+-- AI 功能相关表
+-- =========================================
+-- 开发环境：如需干净重建，取消下面的注释
+-- DROP TABLE IF EXISTS knowledge_document;
+-- DROP TABLE IF EXISTS ai_conversation;
+
+-- 创建AI对话表
+CREATE TABLE IF NOT EXISTS ai_conversation (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER,
+    user_id INTEGER,  -- 改为可空，便于开发
+    role VARCHAR(20) NOT NULL,
+    message TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user_info(id) ON DELETE SET NULL
+);
+
+-- 对话表索引
+CREATE INDEX IF NOT EXISTS idx_ai_conversation_project_id ON ai_conversation(project_id);
+CREATE INDEX IF NOT EXISTS idx_ai_conversation_user_id ON ai_conversation(user_id);
+CREATE INDEX IF NOT EXISTS idx_ai_conversation_created_at ON ai_conversation(created_at DESC);
+
+-- 创建知识库文档表
+CREATE TABLE IF NOT EXISTS knowledge_document (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER,
+    user_id INTEGER,
+    file_name VARCHAR(255),
+    title VARCHAR(255),
+    content TEXT,
+    doc_type VARCHAR(50),
+    file_path VARCHAR(500),
+    vector_id VARCHAR(255),
+    created_by INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user_info(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES user_info(id) ON DELETE SET NULL
+);
+
+-- 知识库文档表索引
+CREATE INDEX IF NOT EXISTS idx_knowledge_document_project_id ON knowledge_document(project_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_document_user_id ON knowledge_document(user_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_document_created_at ON knowledge_document(created_at DESC);

@@ -10,107 +10,216 @@
             </el-button>
             <h2>风险管理</h2>
           </div>
-          <el-button type="primary" @click="showRiskDialog = true">
+          <el-button type="primary" @click="openCreateDialog" size="large">
             <el-icon><Plus /></el-icon>
             添加风险
           </el-button>
         </div>
       </template>
 
-      <el-row :gutter="20" class="stats-row">
+      <!-- 统计卡片 -->
+      <el-row :gutter="16" class="stats-row">
         <el-col :xs="12" :sm="6">
           <div class="stat-card">
-            <el-icon class="stat-icon"><Warning /></el-icon>
+            <div class="stat-icon-wrapper" style="background-color: #90939915;">
+              <el-icon :size="24" color="#909399"><Warning /></el-icon>
+            </div>
             <div class="stat-info">
-              <div class="stat-value">{{ risks.length }}</div>
+              <div class="stat-number">{{ risks.length }}</div>
               <div class="stat-label">总风险数</div>
             </div>
           </div>
         </el-col>
         <el-col :xs="12" :sm="6">
           <div class="stat-card">
-            <el-icon class="stat-icon danger"><CircleClose /></el-icon>
+            <div class="stat-icon-wrapper" style="background-color: #f56c6c15;">
+              <el-icon :size="24" color="#f56c6c"><CircleClose /></el-icon>
+            </div>
             <div class="stat-info">
-              <div class="stat-value">{{ highRisksCount }}</div>
+              <div class="stat-number" style="color: #f56c6c;">{{ highRisksCount }}</div>
               <div class="stat-label">高风险</div>
             </div>
           </div>
         </el-col>
         <el-col :xs="12" :sm="6">
           <div class="stat-card">
-            <el-icon class="stat-icon primary"><Monitor /></el-icon>
+            <div class="stat-icon-wrapper" style="background-color: #409eff15;">
+              <el-icon :size="24" color="#409eff"><Monitor /></el-icon>
+            </div>
             <div class="stat-info">
-              <div class="stat-value">{{ monitoringRisksCount }}</div>
+              <div class="stat-number" style="color: #409eff;">{{ monitoringRisksCount }}</div>
               <div class="stat-label">监控中</div>
             </div>
           </div>
         </el-col>
         <el-col :xs="12" :sm="6">
           <div class="stat-card">
-            <el-icon class="stat-icon success"><CircleCheck /></el-icon>
+            <div class="stat-icon-wrapper" style="background-color: #67c23a15;">
+              <el-icon :size="24" color="#67c23a"><CircleCheck /></el-icon>
+            </div>
             <div class="stat-info">
-              <div class="stat-value">{{ resolvedRisksCount }}</div>
+              <div class="stat-number" style="color: #67c23a;">{{ resolvedRisksCount }}</div>
               <div class="stat-label">已解决</div>
             </div>
           </div>
         </el-col>
       </el-row>
 
-      <el-table :data="risks" style="width: 100%" v-loading="loading">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="风险名称" min-width="180" />
+      <!-- 搜索栏 -->
+      <div class="search-bar">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索风险名称或描述..."
+          clearable
+          prefix-icon="Search"
+          style="width: 300px"
+          @input="handleSearch"
+        />
+        <el-select v-model="filterStatus" placeholder="筛选状态" clearable style="width: 150px" @change="handleSearch">
+          <el-option label="全部" value="" />
+          <el-option label="已识别" value="identified">
+            <el-tag size="small" type="info">已识别</el-tag>
+          </el-option>
+          <el-option label="分析中" value="analyzing">
+            <el-tag size="small" type="warning">分析中</el-tag>
+          </el-option>
+          <el-option label="计划中" value="planning">
+            <el-tag size="small" type="warning">计划中</el-tag>
+          </el-option>
+          <el-option label="监控中" value="monitoring">
+            <el-tag size="small" type="primary">监控中</el-tag>
+          </el-option>
+          <el-option label="已解决" value="resolved">
+            <el-tag size="small" type="success">已解决</el-tag>
+          </el-option>
+        </el-select>
+        <el-select v-model="filterCategory" placeholder="筛选类别" clearable style="width: 150px" @change="handleSearch">
+          <el-option label="全部" value="" />
+          <el-option label="技术风险" value="technical" />
+          <el-option label="人员风险" value="human" />
+          <el-option label="进度风险" value="schedule" />
+          <el-option label="质量风险" value="quality" />
+          <el-option label="外部风险" value="external" />
+        </el-select>
+      </div>
+
+      <!-- 风险表格 -->
+      <el-table 
+        :data="filteredRisks" 
+        style="width: 100%" 
+        v-loading="loading"
+        :empty-text="searchKeyword || filterStatus || filterCategory ? '没有找到匹配的风险' : '暂无风险记录，点击右上角添加新风险'"
+        stripe
+        border
+      >
+        <el-table-column prop="id" label="ID" width="70" align="center" />
+        <el-table-column prop="name" label="风险名称" min-width="180">
+          <template #default="scope">
+            <div class="risk-name-cell">
+              <el-icon :size="16" :color="getRiskLevelColor(scope.row.probability, scope.row.impact)"><Warning /></el-icon>
+              <span>{{ scope.row.name }}</span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="probability" label="概率" width="120">
+        <el-table-column label="概率" width="140" align="center">
           <template #default="scope">
-            <el-progress :percentage="scope.row.probability" :color="getProbabilityColor(scope.row.probability)" />
+            <el-progress 
+              :percentage="scope.row.probability" 
+              :color="getProbabilityColor(scope.row.probability)"
+              :stroke-width="6"
+            />
           </template>
         </el-table-column>
-        <el-table-column prop="impact" label="影响" width="120">
+        <el-table-column label="影响" width="140" align="center">
           <template #default="scope">
-            <el-progress :percentage="scope.row.impact" :color="getImpactColor(scope.row.impact)" />
+            <el-progress 
+              :percentage="scope.row.impact" 
+              :color="getImpactColor(scope.row.impact)"
+              :stroke-width="6"
+            />
           </template>
         </el-table-column>
-        <el-table-column prop="category" label="类别" width="100">
-          <template #default="scope">{{ getCategoryName(scope.row.category) }}</template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="category" label="类别" width="110" align="center">
           <template #default="scope">
-            <el-tag :type="getStatusType(scope.row.status)">{{ getStatusName(scope.row.status) }}</el-tag>
+            <el-tag size="small" type="info" effect="light">
+              {{ getCategoryName(scope.row.category) }}
+            </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="风险值" width="100">
+        <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="scope">
-            <el-tag :type="getRiskLevel(scope.row.probability, scope.row.impact)">
+            <el-tag :type="getStatusType(scope.row.status)" effect="light" round size="small">
+              {{ getStatusName(scope.row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="风险值" width="90" align="center">
+          <template #default="scope">
+            <el-tag 
+              :type="getRiskLevelType(scope.row.probability, scope.row.impact)" 
+              effect="dark" 
+              round
+              size="small"
+            >
               {{ Math.round((scope.row.probability * scope.row.impact) / 100) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="创建日期" width="120">
-          <template #default="scope">{{ formatDate(scope.row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="创建日期" width="130" align="center">
           <template #default="scope">
-            <el-button type="primary" size="small" @click="editRisk(scope.row)">
+            <div class="date-cell">
+              <el-icon :size="14" color="#909399"><Calendar /></el-icon>
+              {{ formatDate(scope.row.createdAt) }}
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="180" fixed="right" align="center">
+          <template #default="scope">
+            <el-button type="primary" size="small" plain @click="editRisk(scope.row)">
               <el-icon><Edit /></el-icon>
               编辑
             </el-button>
-            <el-button type="danger" size="small" @click="deleteRisk(scope.row.id)">
+            <el-button type="danger" size="small" plain @click="deleteRisk(scope.row.id)">
               <el-icon><Delete /></el-icon>
               删除
             </el-button>
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 分页 -->
+      <el-pagination
+        v-if="filteredRisks.length > 0"
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :page-sizes="[10, 20, 50]"
+        layout="total, sizes, prev, pager, next"
+        :total="filteredRisks.length"
+        class="pagination"
+      />
     </el-card>
 
     <!-- 风险对话框 -->
-    <el-dialog v-model="showRiskDialog" :title="isEditRisk ? '编辑风险' : '添加风险'" width="700px">
-      <el-form :model="riskForm" label-width="100px">
+    <el-dialog 
+      v-model="showRiskDialog" 
+      :title="isEditRisk ? '编辑风险' : '添加风险'" 
+      width="700px"
+      destroy-on-close
+    >
+      <el-form :model="riskForm" label-width="100px" :rules="formRules" ref="formRef">
         <el-form-item label="风险名称" prop="name">
-          <el-input v-model="riskForm.name" placeholder="请输入风险名称" />
+          <el-input v-model="riskForm.name" placeholder="请输入风险名称" maxlength="100" show-word-limit />
         </el-form-item>
         <el-form-item label="风险描述" prop="description">
-          <el-input v-model="riskForm.description" type="textarea" :rows="3" placeholder="请输入风险描述" />
+          <el-input 
+            v-model="riskForm.description" 
+            type="textarea" 
+            :rows="3" 
+            placeholder="请输入风险描述"
+            maxlength="500"
+            show-word-limit
+          />
         </el-form-item>
         <el-row :gutter="20">
           <el-col :span="12">
@@ -135,23 +244,49 @@
         </el-form-item>
         <el-form-item label="当前状态" prop="status">
           <el-select v-model="riskForm.status" placeholder="请选择状态" style="width: 100%">
-            <el-option label="已识别" value="identified" />
-            <el-option label="分析中" value="analyzing" />
-            <el-option label="计划中" value="planning" />
-            <el-option label="监控中" value="monitoring" />
-            <el-option label="已解决" value="resolved" />
+            <el-option label="已识别" value="identified">
+              <el-tag size="small" type="info">已识别</el-tag>
+            </el-option>
+            <el-option label="分析中" value="analyzing">
+              <el-tag size="small" type="warning">分析中</el-tag>
+            </el-option>
+            <el-option label="计划中" value="planning">
+              <el-tag size="small" type="warning">计划中</el-tag>
+            </el-option>
+            <el-option label="监控中" value="monitoring">
+              <el-tag size="small" type="primary">监控中</el-tag>
+            </el-option>
+            <el-option label="已解决" value="resolved">
+              <el-tag size="small" type="success">已解决</el-tag>
+            </el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="应对措施" prop="mitigationPlan">
-          <el-input v-model="riskForm.mitigationPlan" type="textarea" :rows="3" placeholder="请输入应对措施" />
+          <el-input 
+            v-model="riskForm.mitigationPlan" 
+            type="textarea" 
+            :rows="3" 
+            placeholder="请输入应对措施"
+            maxlength="500"
+            show-word-limit
+          />
         </el-form-item>
         <el-form-item label="应急预案" prop="contingencyPlan">
-          <el-input v-model="riskForm.contingencyPlan" type="textarea" :rows="3" placeholder="请输入应急预案" />
+          <el-input 
+            v-model="riskForm.contingencyPlan" 
+            type="textarea" 
+            :rows="3" 
+            placeholder="请输入应急预案"
+            maxlength="500"
+            show-word-limit
+          />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showRiskDialog = false">取消</el-button>
-        <el-button type="primary" @click="saveRisk" :loading="saving">保存</el-button>
+        <el-button type="primary" @click="saveRisk" :loading="saving">
+          {{ isEditRisk ? '保存修改' : '确认添加' }}
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -161,7 +296,10 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { ArrowLeft, Plus, Edit, Delete, Warning, CircleClose, Monitor, CircleCheck } from '@element-plus/icons-vue';
+import { 
+  ArrowLeft, Plus, Edit, Delete, Warning, CircleClose, 
+  Monitor, CircleCheck, Search, Calendar 
+} from '@element-plus/icons-vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -172,6 +310,12 @@ const loading = ref(false);
 const saving = ref(false);
 const showRiskDialog = ref(false);
 const isEditRisk = ref(false);
+const searchKeyword = ref('');
+const filterStatus = ref('');
+const filterCategory = ref('');
+const currentPage = ref(1);
+const pageSize = ref(10);
+const formRef = ref();
 
 const riskForm = ref({
   id: null,
@@ -188,6 +332,19 @@ const riskForm = ref({
   identifiedAt: new Date()
 });
 
+const formRules = {
+  name: [
+    { required: true, message: '请输入风险名称', trigger: 'blur' },
+    { min: 2, max: 100, message: '风险名称长度应在 2-100 个字符之间', trigger: 'blur' }
+  ],
+  category: [
+    { required: true, message: '请选择风险类别', trigger: 'change' }
+  ],
+  status: [
+    { required: true, message: '请选择当前状态', trigger: 'change' }
+  ]
+};
+
 const highRisksCount = computed(() => {
   return risks.value.filter(r => {
     const riskValue = (r.probability * r.impact) / 100;
@@ -201,6 +358,28 @@ const monitoringRisksCount = computed(() => {
 
 const resolvedRisksCount = computed(() => {
   return risks.value.filter(r => r.status === 'resolved').length;
+});
+
+const filteredRisks = computed(() => {
+  let result = risks.value;
+  
+  if (searchKeyword.value) {
+    const keyword = searchKeyword.value.toLowerCase();
+    result = result.filter(r => 
+      r.name?.toLowerCase().includes(keyword) || 
+      r.description?.toLowerCase().includes(keyword)
+    );
+  }
+  
+  if (filterStatus.value) {
+    result = result.filter(r => r.status === filterStatus.value);
+  }
+  
+  if (filterCategory.value) {
+    result = result.filter(r => r.category === filterCategory.value);
+  }
+  
+  return result;
 });
 
 const formatDate = (dateStr: string) => {
@@ -254,11 +433,28 @@ const getImpactColor = (impact: number) => {
   return '#67c23a';
 };
 
-const getRiskLevel = (probability: number, impact: number) => {
+const getRiskLevelType = (probability: number, impact: number) => {
   const riskValue = (probability * impact) / 100;
   if (riskValue >= 40) return 'danger';
   if (riskValue >= 20) return 'warning';
   return 'success';
+};
+
+const getRiskLevelColor = (probability: number, impact: number) => {
+  const riskValue = (probability * impact) / 100;
+  if (riskValue >= 40) return '#f56c6c';
+  if (riskValue >= 20) return '#e6a23c';
+  return '#67c23a';
+};
+
+const handleSearch = () => {
+  currentPage.value = 1;
+};
+
+const openCreateDialog = () => {
+  isEditRisk.value = false;
+  resetRiskForm();
+  showRiskDialog.value = true;
 };
 
 const fetchRisks = async () => {
@@ -302,10 +498,8 @@ const resetRiskForm = () => {
 };
 
 const saveRisk = async () => {
-  if (!riskForm.value.name) {
-    ElMessage.warning('请输入风险名称');
-    return;
-  }
+  const valid = await formRef.value?.validate().catch(() => false);
+  if (!valid) return;
 
   saving.value = true;
   try {
@@ -333,6 +527,7 @@ const saveRisk = async () => {
     if (result.success) {
       ElMessage.success(isEditRisk.value ? '更新风险成功' : '添加风险成功');
       showRiskDialog.value = false;
+      resetRiskForm();
       await fetchRisks();
     } else {
       ElMessage.error(result.message || '操作失败');
@@ -399,7 +594,7 @@ onMounted(() => {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
 }
 
 .header-left h2 {
@@ -410,44 +605,87 @@ onMounted(() => {
 }
 
 .stats-row {
-  margin: 20px 0;
+  margin-bottom: 24px;
 }
 
 .stat-card {
   background: #fff;
-  border-radius: 8px;
-  padding: 20px;
+  border-radius: 12px;
+  padding: 16px;
   display: flex;
   align-items: center;
-  gap: 15px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s;
 }
 
-.stat-icon {
-  font-size: 32px;
-  color: #e6a23c;
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.stat-icon.danger {
-  color: #f56c6c;
+.stat-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.stat-icon.primary {
-  color: #409eff;
+.stat-info {
+  flex: 1;
 }
 
-.stat-icon.success {
-  color: #67c23a;
-}
-
-.stat-value {
+.stat-number {
   font-size: 24px;
   font-weight: 700;
-  color: #303133;
+  color: #409eff;
+  line-height: 1;
+  margin-bottom: 4px;
 }
 
 .stat-label {
-  font-size: 14px;
+  font-size: 12px;
   color: #909399;
+}
+
+.search-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.risk-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #606266;
+  font-size: 13px;
+}
+
+.pagination {
+  margin-top: 20px;
+  justify-content: flex-end;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .search-bar {
+    flex-direction: column;
+  }
+  .search-bar .el-input,
+  .search-bar .el-select {
+    width: 100% !important;
+  }
 }
 </style>

@@ -1,6 +1,18 @@
+-- =============================================
 -- 演示数据初始化脚本
+-- =============================================
+-- 注意：此脚本需要在init.sql之后执行
+-- =============================================
 
--- 创建演示项目1：AI智能办公系统（进行中）
+BEGIN;
+
+\echo '开始导入演示数据...'
+
+-- =============================================
+-- 项目1：AI智能办公系统（进行中）
+-- =============================================
+\echo '  - 插入项目1...'
+
 INSERT INTO project (name, description, start_date, end_date, status, created_by) VALUES
 ('AI智能办公系统', '开发一款基于人工智能的办公自动化系统，包含智能日程管理、邮件分类、文档自动归档等功能', '2026-01-01', '2026-06-30', 'in_progress', 2);
 
@@ -60,12 +72,12 @@ INSERT INTO change_request (project_id, title, description, reason, impact, stat
 (1, '调整文档归档算法', '当前算法分类效果不佳', '提升归档准确性', '需要重新训练模型，预计增加10人天', 'pending', 3, NULL, NULL);
 
 -- 添加需求调研
-INSERT INTO requirement_research (project_id, title, description, 调研方法, 调研结果, 创建人) VALUES
+INSERT INTO requirement_research (project_id, title, description, research_method, research_result, creator_id) VALUES
 (1, '用户调研', '调研目标用户的办公自动化需求', '问卷调研+用户访谈', '用户最关注日程管理和邮件分类功能', 2),
 (1, '竞品分析', '分析市场上的同类产品', '竞品对比分析', '主要竞品功能全面但价格较高，我们有机会在性价比上取胜', 2);
 
 -- 添加可行性分析
-INSERT INTO feasibility_analysis (project_id, title, 技术可行性, 经济可行性, 市场可行性, 风险评估, 结论, 创建人) VALUES
+INSERT INTO feasibility_analysis (project_id, title, technical_feasibility, economic_feasibility, market_feasibility, risk_assessment, conclusion, creator_id) VALUES
 (1, 'AI办公系统可行性', '已有成熟的NLP和CV技术支撑', '预计投入150万，预期收益300万', '办公自动化市场需求旺盛', '技术风险中等，需注意AI模型训练', '可行', 2);
 
 -- =====================================================
@@ -160,7 +172,44 @@ INSERT INTO project_retrospective (
     1
 );
 
--- 添加项目2的通知数据
+-- 添加通知数据
 INSERT INTO notification (user_id, title, content, type, read_status, create_time) VALUES
+-- 用户1的通知
 (1, '项目完成', '电商导购系统项目已成功上线，感谢团队的辛勤付出！', 'project_status', false, '2025-12-31 10:00:00'),
-(3, '任务完成', '恭喜！您负责的所有任务都已完成验收。', 'task_assigned', true, '2025-12-30 15:00:00');
+(1, '新任务分配', '您被分配了新任务：AI模型优化，项目：AI智能办公系统', 'task_assigned', false, '2026-04-28 09:00:00'),
+(1, '高风险预警', '项目 AI智能办公系统 中发现高风险项：AI模型准确性不足', 'risk_alert', true, '2026-04-25 14:00:00'),
+(1, '里程碑提醒', '项目 AI智能办公系统 的里程碑 Alpha版本发布 即将到达', 'milestone', false, '2026-04-29 08:00:00'),
+
+-- 用户2的通知
+(2, '任务进度更新', '任务 智能日程管理模块 进度更新为 75%', 'task_progress', false, '2026-04-28 16:00:00'),
+(2, '高风险预警', '项目 AI智能办公系统 中发现高风险项：进度延期风险', 'risk_alert', false, '2026-04-27 11:00:00'),
+(2, '变更请求待审批', '项目 AI智能办公系统 有新的变更请求：调整文档归档算法，需要您审批', 'change_request', false, '2026-04-26 10:00:00'),
+(2, '项目状态变更', '项目 电商导购系统 状态已变更为：completed', 'project_status', true, '2025-12-31 10:30:00'),
+
+-- 用户3的通知
+(3, '任务完成', '恭喜！您负责的所有任务都已完成验收。', 'task_assigned', true, '2025-12-30 15:00:00'),
+(3, '新任务分配', '您被分配了新任务：系统测试，项目：AI智能办公系统', 'task_assigned', false, '2026-04-28 10:00:00'),
+(3, '任务进度更新', '任务 邮件智能分类功能 进度更新为 50%', 'task_progress', false, '2026-04-27 14:00:00'),
+(3, '里程碑提醒', '项目 AI智能办公系统 的里程碑 Beta版本发布 即将到达', 'milestone', false, '2026-04-29 08:30:00'),
+
+-- 用户4的通知
+(4, '新任务分配', '您被分配了新任务：系统测试，项目：AI智能办公系统', 'task_assigned', false, '2026-04-28 10:30:00'),
+(4, '任务进度更新', '任务 日历组件开发 进度更新为 80%', 'task_progress', true, '2026-04-26 15:00:00'),
+(4, '高风险预警', '项目 AI智能办公系统 中发现高风险项：人员离职风险', 'risk_alert', false, '2026-04-25 09:00:00');
+
+-- =============================================
+-- 提交事务
+-- =============================================
+COMMIT;
+
+\echo ''
+\echo '演示数据导入完成！'
+\echo ''
+\echo '数据统计：'
+SELECT
+    (SELECT COUNT(*) FROM project) as "项目数",
+    (SELECT COUNT(*) FROM task) as "任务数",
+    (SELECT COUNT(*) FROM project_member) as "项目成员数",
+    (SELECT COUNT(*) FROM risk) as "风险数",
+    (SELECT COUNT(*) FROM bug) as "缺陷数",
+    (SELECT COUNT(*) FROM notification) as "通知数";

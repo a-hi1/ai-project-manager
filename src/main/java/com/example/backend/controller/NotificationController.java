@@ -5,7 +5,6 @@ import com.example.backend.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +30,12 @@ public class NotificationController {
     public Map<String, Object> markAllAsRead(@RequestParam Integer userId) {
         notificationService.markAllAsRead(userId);
         return Map.of("success", true, "message", "已标记全部已读");
+    }
+
+    @PostMapping("/mark-read")
+    public Map<String, Object> markAsRead(@RequestParam Integer notificationId, @RequestParam Integer userId) {
+        notificationService.markAsRead(notificationId, userId);
+        return Map.of("success", true, "message", "已标记为已读");
     }
 
     @PostMapping("/create")

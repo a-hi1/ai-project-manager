@@ -1,225 +1,143 @@
 <template>
   <div class="dashboard">
-    <el-container>
-      <el-header>
-        <div class="header-left">
-          <div class="logo">
-            <el-icon :size="24"><Management /></el-icon>
-            <span class="logo-text">AI项目管理系统</span>
-          </div>
-        </div>
-        <div class="header-right">
-          <NotificationPanel />
-          <el-dropdown @command="handleCommand">
-            <div class="user-info">
-              <el-avatar :size="32" :icon="User" />
-              <span class="username">{{ user?.username }}</span>
-              <el-icon><ArrowDown /></el-icon>
-            </div>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-                <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
-      </el-header>
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-title">控制台</h1>
+        <p class="page-subtitle">欢迎使用AI项目管理系统</p>
+      </div>
+    </div>
 
-      <el-container>
-        <el-aside :width="isSidebarCollapsed ? '64px' : '220px'">
-          <div class="sidebar-toggle" @click="toggleSidebar">
-            <el-icon :size="20">
-              <Fold v-if="!isSidebarCollapsed" />
-              <Expand v-else />
-            </el-icon>
+    <el-row :gutter="20" class="stat-row">
+      <el-col :xs="24" :sm="12" :md="6">
+        <div class="stat-card">
+          <div class="stat-icon project-icon">
+            <el-icon :size="28"><Folder /></el-icon>
           </div>
-          <el-menu
-            :default-active="activeMenu"
-            class="sidebar-menu"
-            :collapse="isSidebarCollapsed"
-            @select="handleMenuSelect"
-          >
-            <el-menu-item index="/projects">
-              <el-icon><Folder /></el-icon>
-              <template #title>项目列表</template>
-            </el-menu-item>
-            <el-menu-item index="/project/create">
-              <el-icon><Plus /></el-icon>
-              <template #title>创建项目</template>
-            </el-menu-item>
-            <el-menu-item index="/operation-log">
-              <el-icon><Document /></el-icon>
-              <template #title>操作日志</template>
-            </el-menu-item>
-            <el-divider />
-            <el-sub-menu index="ai">
-              <template #title>
-                <el-icon><ChatDotRound /></el-icon>
-                <span>AI辅助</span>
+          <div class="stat-info">
+            <div class="stat-value">{{ stats.totalProjects }}</div>
+            <div class="stat-label">项目总数</div>
+          </div>
+        </div>
+      </el-col>
+      <el-col :xs="24" :sm="12" :md="6">
+        <div class="stat-card">
+          <div class="stat-icon task-icon">
+            <el-icon :size="28"><Document /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">{{ stats.totalTasks }}</div>
+            <div class="stat-label">任务总数</div>
+          </div>
+        </div>
+      </el-col>
+      <el-col :xs="24" :sm="12" :md="6">
+        <div class="stat-card">
+          <div class="stat-icon risk-icon">
+            <el-icon :size="28"><Warning /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">{{ stats.totalRisks }}</div>
+            <div class="stat-label">风险总数</div>
+          </div>
+        </div>
+      </el-col>
+      <el-col :xs="24" :sm="12" :md="6">
+        <div class="stat-card">
+          <div class="stat-icon bug-icon">
+            <el-icon :size="28"><CircleClose /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">{{ stats.totalBugs }}</div>
+            <div class="stat-label">缺陷总数</div>
+          </div>
+        </div>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="20" class="chart-row">
+      <el-col :xs="24" :lg="12">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>项目进度概览</span>
+            </div>
+          </template>
+          <div ref="projectChartRef" style="width: 100%; height: 280px;"></div>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :lg="12">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>任务状态分布</span>
+            </div>
+          </template>
+          <div ref="taskChartRef" style="width: 100%; height: 280px;"></div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="20" class="chart-row">
+      <el-col :xs="24" :lg="12">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>风险分析</span>
+              <el-button type="primary" link @click="checkRiskAlerts">刷新</el-button>
+            </div>
+          </template>
+          <div ref="riskChartRef" style="width: 100%; height: 280px;"></div>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :lg="12">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>项目列表</span>
+              <el-button type="primary" link @click="router.push('/projects')">查看全部</el-button>
+            </div>
+          </template>
+          <el-table :data="projects" style="width: 100%" :show-header="true">
+            <el-table-column prop="name" label="项目名称" min-width="150" show-overflow-tooltip />
+            <el-table-column prop="status" label="状态" width="100">
+              <template #default="scope">
+                <el-tag :type="getStatusType(scope.row.status)" size="small">
+                  {{ getStatusName(scope.row.status) }}
+                </el-tag>
               </template>
-              <el-menu-item index="ai-chat">
-                <el-icon><ChatDotRound /></el-icon>
-                <template #title>AI助手</template>
-              </el-menu-item>
-              <el-menu-item index="ai-requirement">
-                <el-icon><MagicStick /></el-icon>
-                <template #title>需求解析</template>
-              </el-menu-item>
-              <el-menu-item index="ai-task">
-                <el-icon><List /></el-icon>
-                <template #title>任务拆分</template>
-              </el-menu-item>
-              <el-menu-item index="ai-knowledge">
-                <el-icon><Files /></el-icon>
-                <template #title>知识库</template>
-              </el-menu-item>
-            </el-sub-menu>
-          </el-menu>
-        </el-aside>
+            </el-table-column>
+            <el-table-column label="操作" width="80" align="center">
+              <template #default="scope">
+                <el-button type="primary" link @click="viewProject(scope.row.id)">查看</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-col>
+    </el-row>
 
-        <el-main>
-          <div class="page-header">
-            <div class="page-header-left">
-              <h1 class="page-title">控制台</h1>
-              <p class="page-subtitle">欢迎使用AI项目管理系统</p>
-            </div>
-          </div>
-
-          <el-row :gutter="20" class="stat-row">
-            <el-col :xs="24" :sm="12" :md="6">
-              <div class="stat-card">
-                <div class="stat-icon project-icon">
-                  <el-icon :size="28"><Folder /></el-icon>
-                </div>
-                <div class="stat-info">
-                  <div class="stat-value">{{ stats.totalProjects }}</div>
-                  <div class="stat-label">项目总数</div>
-                </div>
-              </div>
-            </el-col>
-            <el-col :xs="24" :sm="12" :md="6">
-              <div class="stat-card">
-                <div class="stat-icon task-icon">
-                  <el-icon :size="28"><Document /></el-icon>
-                </div>
-                <div class="stat-info">
-                  <div class="stat-value">{{ stats.totalTasks }}</div>
-                  <div class="stat-label">任务总数</div>
-                </div>
-              </div>
-            </el-col>
-            <el-col :xs="24" :sm="12" :md="6">
-              <div class="stat-card">
-                <div class="stat-icon risk-icon">
-                  <el-icon :size="28"><Warning /></el-icon>
-                </div>
-                <div class="stat-info">
-                  <div class="stat-value">{{ stats.totalRisks }}</div>
-                  <div class="stat-label">风险总数</div>
-                </div>
-              </div>
-            </el-col>
-            <el-col :xs="24" :sm="12" :md="6">
-              <div class="stat-card">
-                <div class="stat-icon bug-icon">
-                  <el-icon :size="28"><CircleClose /></el-icon>
-                </div>
-                <div class="stat-info">
-                  <div class="stat-value">{{ stats.totalBugs }}</div>
-                  <div class="stat-label">缺陷总数</div>
-                </div>
-              </div>
-            </el-col>
-          </el-row>
-
-          <el-row :gutter="20" class="chart-row">
-            <el-col :xs="24" :lg="12">
-              <el-card shadow="hover">
-                <template #header>
-                  <div class="card-header">
-                    <span>项目进度概览</span>
-                  </div>
-                </template>
-                <div ref="projectChartRef" style="width: 100%; height: 280px;"></div>
-              </el-card>
-            </el-col>
-            <el-col :xs="24" :lg="12">
-              <el-card shadow="hover">
-                <template #header>
-                  <div class="card-header">
-                    <span>任务状态分布</span>
-                  </div>
-                </template>
-                <div ref="taskChartRef" style="width: 100%; height: 280px;"></div>
-              </el-card>
-            </el-col>
-          </el-row>
-
-          <el-row :gutter="20" class="chart-row">
-            <el-col :xs="24" :lg="12">
-              <el-card shadow="hover">
-                <template #header>
-                  <div class="card-header">
-                    <span>风险分析</span>
-                    <el-button type="primary" link @click="checkRiskAlerts">刷新</el-button>
-                  </div>
-                </template>
-                <div ref="riskChartRef" style="width: 100%; height: 280px;"></div>
-              </el-card>
-            </el-col>
-            <el-col :xs="24" :lg="12">
-              <el-card shadow="hover">
-                <template #header>
-                  <div class="card-header">
-                    <span>项目列表</span>
-                    <el-button type="primary" link @click="router.push('/projects')">查看全部</el-button>
-                  </div>
-                </template>
-                <el-table :data="projects" style="width: 100%" :show-header="true">
-                  <el-table-column prop="name" label="项目名称" min-width="150" show-overflow-tooltip />
-                  <el-table-column prop="status" label="状态" width="100">
-                    <template #default="scope">
-                      <el-tag :type="getStatusType(scope.row.status)" size="small">
-                        {{ getStatusName(scope.row.status) }}
-                      </el-tag>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="操作" width="80" align="center">
-                    <template #default="scope">
-                      <el-button type="primary" link @click="viewProject(scope.row.id)">查看</el-button>
-                    </template>
-                  </el-table-column>
-                </el-table>
-              </el-card>
-            </el-col>
-          </el-row>
-
-          <el-card shadow="hover" class="alert-card">
-            <template #header>
-              <div class="card-header">
-                <span>风险预警</span>
-                <el-button type="primary" link @click="checkRiskAlerts">刷新预警</el-button>
-              </div>
-            </template>
-            <div v-if="riskAlerts.length === 0" class="empty-state">
-              <el-icon :size="48" color="#dcdfe6"><CircleCheck /></el-icon>
-              <p>暂无风险预警</p>
-            </div>
-            <el-alert
-              v-for="(alert, index) in riskAlerts"
-              :key="index"
-              :title="alert.title"
-              :type="alert.type"
-              :description="alert.description"
-              show-icon
-              closable
-              class="alert-item"
-            />
-          </el-card>
-        </el-main>
-      </el-container>
-    </el-container>
+    <el-card shadow="hover" class="alert-card">
+      <template #header>
+        <div class="card-header">
+          <span>风险预警</span>
+          <el-button type="primary" link @click="checkRiskAlerts">刷新预警</el-button>
+        </div>
+      </template>
+      <div v-if="riskAlerts.length === 0" class="empty-state">
+        <el-icon :size="48" color="#dcdfe6"><CircleCheck /></el-icon>
+        <p>暂无风险预警</p>
+      </div>
+      <el-alert
+        v-for="(alert, index) in riskAlerts"
+        :key="index"
+        :title="alert.title"
+        :type="alert.type"
+        :description="alert.description"
+        show-icon
+        closable
+        class="alert-item"
+      />
+    </el-card>
   </div>
 </template>
 
@@ -228,29 +146,15 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import {
-  User,
-  Management,
   Folder,
-  Plus,
   Document,
   Warning,
   CircleClose,
-  ArrowDown,
-  Expand,
-  Fold,
   CircleCheck,
-  ChatDotRound,
-  MagicStick,
-  Files,
-  List
 } from '@element-plus/icons-vue';
 import * as echarts from 'echarts';
-import NotificationPanel from '../components/NotificationPanel.vue';
 
 const router = useRouter();
-const user = ref<any>(null);
-const activeMenu = ref('/');
-const isSidebarCollapsed = ref(false);
 
 const stats = ref({
   totalProjects: 0,
@@ -269,40 +173,6 @@ const riskChartRef = ref<HTMLElement | null>(null);
 let projectChart: echarts.ECharts | null = null;
 let taskChart: echarts.ECharts | null = null;
 let riskChart: echarts.ECharts | null = null;
-
-const toggleSidebar = () => {
-  isSidebarCollapsed.value = !isSidebarCollapsed.value;
-};
-
-const handleCommand = (command: string) => {
-  if (command === 'logout') {
-    logout();
-  } else if (command === 'profile') {
-    ElMessage.info('个人中心功能开发中');
-  }
-};
-
-const logout = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  ElMessage.success('退出登录成功');
-  router.push('/login');
-};
-
-const handleMenuSelect = (key: string) => {
-  console.log('菜单选择:', key);
-  if (key === 'ai-chat') {
-    router.push('/ai-chat');
-  } else if (key === 'ai-requirement') {
-    router.push('/ai-requirement');
-  } else if (key === 'ai-task') {
-    router.push('/ai-task');
-  } else if (key === 'ai-knowledge') {
-    router.push('/ai-knowledge');
-  } else if (key.startsWith('/')) {
-    router.push(key);
-  }
-};
 
 const viewProject = (id: number) => {
   router.push(`/project/${id}`);
@@ -527,11 +397,6 @@ const initCharts = () => {
 };
 
 onMounted(() => {
-  const userStr = localStorage.getItem('user');
-  if (userStr) {
-    user.value = JSON.parse(userStr);
-  }
-
   initCharts();
   fetchDashboardData();
 });
@@ -545,95 +410,7 @@ onUnmounted(() => {
 
 <style scoped>
 .dashboard {
-  height: 100vh;
-  background-color: #f5f7fa;
-}
-
-.el-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: linear-gradient(135deg, #409EFF 0%, #337ecc 100%);
-  color: white;
-  padding: 0 20px;
-  height: 60px;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.logo-text {
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: 1px;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  padding: 4px 12px;
-  border-radius: 20px;
-  transition: background-color 0.3s;
-}
-
-.user-info:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-.username {
-  font-size: 14px;
-}
-
-.el-aside {
-  background-color: #ffffff;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
-  transition: width 0.3s ease;
-  overflow-x: hidden;
-}
-
-.sidebar-toggle {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 48px;
-  cursor: pointer;
-  color: #606266;
-  border-bottom: 1px solid #ebeef5;
-  transition: color 0.3s;
-}
-
-.sidebar-toggle:hover {
-  color: #409EFF;
-}
-
-.sidebar-menu {
-  border-right: none;
-}
-
-.sidebar-menu:not(.el-menu--collapse) {
-  width: 220px;
-}
-
-.el-main {
-  padding: 20px;
-  overflow-y: auto;
+  padding: 0;
 }
 
 .page-header {
@@ -760,14 +537,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-  .el-header {
-    padding: 0 12px;
-  }
-
-  .logo-text {
-    display: none;
-  }
-
   .el-main {
     padding: 12px;
   }

@@ -3,7 +3,13 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <h2>项目复盘</h2>
+          <div class="header-left">
+            <el-button type="primary" @click="goBack">
+              <el-icon><ArrowLeft /></el-icon>
+              返回
+            </el-button>
+            <h2>项目复盘</h2>
+          </div>
           <el-button type="primary" @click="generateRetrospective">生成复盘报告</el-button>
         </div>
       </template>
@@ -84,10 +90,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import { ArrowLeft } from '@element-plus/icons-vue';
 
 const route = useRoute();
+const router = useRouter();
 const projectId = Number(route.params.id);
 
 const activeTab = ref('data');
@@ -169,6 +177,10 @@ const saveRetrospective = async () => {
   } catch (error) {
     ElMessage.error('网络错误');
   }
+}
+
+const goBack = () => {
+  router.back();
 };
 
 onMounted(() => {
@@ -179,6 +191,8 @@ onMounted(() => {
 <style scoped>
 .project-retrospective {
   padding: 20px;
+  background-color: #f5f7fa;
+  min-height: 100vh;
 }
 
 .card-header {
@@ -187,9 +201,17 @@ onMounted(() => {
   align-items: center;
 }
 
-.card-header h2 {
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.header-left h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #303133;
 }
 
 .retrospective-content {
