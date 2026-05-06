@@ -1,4 +1,4 @@
-﻿﻿﻿<template>
+﻿﻿﻿﻿<template>
   <div class="ai-requirement-parser">
     <el-card>
       <template #header>
@@ -271,6 +271,13 @@ const parseContent = async () => {
 
 const handleUploadSuccess = (response: any) => {
   console.log('上传成功，响应:', response);
+  
+  // 检查 response 是否存在
+  if (!response) {
+    ElMessage.error('服务器无响应');
+    return;
+  }
+  
   if (response.success) {
     parseResult.value = response.data;
     try {
@@ -290,13 +297,13 @@ const handleUploadSuccess = (response: any) => {
       } else {
         throw new Error('未找到有效的JSON格式');
       }
-    } catch {
-      console.log('上传结果JSON解析失败');
+    } catch (e) {
+      console.log('上传结果JSON解析失败:', e);
       parsedData.value = null;
     }
     ElMessage.success('上传并解析完成');
   } else {
-    ElMessage.error(response.message || '上传失败');
+    ElMessage.error(response?.message || '上传失败');
   }
 };
 
