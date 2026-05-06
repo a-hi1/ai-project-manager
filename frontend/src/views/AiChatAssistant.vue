@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<template>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<template>
   <div class="ai-chat-assistant">
     <div class="chat-layout">
       <!-- 侧边栏 -->
@@ -144,17 +144,17 @@
               <div class="message-time">{{ formatTime(msg.createdAt) }}</div>
             </div>
           </div>
-          <div v-if="isStreaming" class="message ai">
+          <div v-if="currentConversation && (currentConversation.isThinking || currentConversation.isStreaming)" class="message ai">
             <div class="message-avatar">
               <el-avatar icon="ChatDotRound" :size="36" />
             </div>
             <div class="message-content">
-              <div v-if="isThinking" class="thinking-dots">
+              <div v-if="currentConversation.isThinking" class="thinking-dots">
                 <span class="dot"></span>
                 <span class="dot"></span>
                 <span class="dot"></span>
               </div>
-              <div v-else class="message-text ai-message streaming-text" v-html="formatMessage(streamingContent)"></div>
+              <div v-else-if="currentConversation.isStreaming" class="message-text ai-message streaming-text" v-html="formatMessage(currentConversation.streamingContent)"></div>
             </div>
           </div>
         </div>
@@ -167,12 +167,12 @@
               :rows="2"
               placeholder="发送消息给 AI 项目助手..."
               @keyup.enter.ctrl="sendMessage"
-              :disabled="isStreaming"
+              :disabled="currentConversation && currentConversation.isStreaming"
               class="input-field"
             />
-            <el-button type="primary" @click="sendMessage" :loading="isStreaming" :disabled="!inputMessage.trim()" class="send-btn">
+            <el-button type="primary" @click="sendMessage" :loading="currentConversation && currentConversation.isStreaming" :disabled="!inputMessage.trim()" class="send-btn">
               <el-icon><Promotion /></el-icon>
-              <span v-if="!isStreaming">发送</span>
+              <span v-if="!currentConversation || !currentConversation.isStreaming">发送</span>
             </el-button>
           </div>
           <div class="input-hint">按 Ctrl + Enter 发送消息</div>
@@ -212,11 +212,7 @@ import { ArrowLeft, ChatDotRound, Delete, Promotion, Upload, UploadFilled, Plus,
 import apiClient from '../utils/api';
 
 const router = useRouter();
-const messages = ref<any[]>([]);
 const inputMessage = ref('');
-const isStreaming = ref(false);
-const isThinking = ref(false);
-const streamingContent = ref('');
 const messagesContainer = ref<HTMLElement | null>(null);
 const token = localStorage.getItem('token') || '';
 const showUploadDialog = ref(false);
@@ -226,6 +222,18 @@ const activeConversationId = ref<string | null>(null);
 const projects = ref<any[]>([]);
 const selectedProjectId = ref<number | null>(null);
 const loadingProjects = ref(false);
+
+// 获取当前活跃会话
+const currentConversation = computed(() => {
+  if (!activeConversationId.value) return null;
+  return conversations.value.find(c => c.id === activeConversationId.value);
+});
+
+// 获取当前会话的消息
+const messages = computed(() => {
+  if (!currentConversation.value) return [];
+  return currentConversation.value.messages || [];
+});
 
 const quickQuestions = [
   '如何管理项目风险？',
@@ -276,44 +284,82 @@ const callAIFunction = async (endpoint: string, functionName: string) => {
     return;
   }
 
-  isStreaming.value = true;
-  isThinking.value = true;
+  // 如果没有活跃会话，先创建一个
+  if (!activeConversationId.value) {
+    const newId = 'conv_' + Date.now().toString() + '_' + Math.random().toString(36).slice(2, 7);
+    activeConversationId.value = newId;
+    
+    // 立即将新会话添加到列表开头
+    const newConversation = {
+      id: newId,
+      title: functionName,
+      messages: [],
+      updatedAt: new Date().toISOString(),
+      isThinking: false,
+      isStreaming: false,
+      streamingContent: ''
+    };
+    conversations.value.unshift(newConversation);
+  }
+
+  // 获取当前会话
+  const conv = currentConversation.value;
+  if (!conv) return;
+
+  conv.isThinking = true;
+  conv.isStreaming = true;
+  conv.streamingContent = '';
 
   try {
     const result: any = await apiClient.post(`/ai/${endpoint}/${selectedProjectId.value}`);
 
     if (result.data) {
-      isThinking.value = false;
+      conv.isThinking = false;
       const fullResponse = result.data;
       let i = 0;
       const typingSpeed = 20;
 
       const typeWriter = () => {
         if (i < fullResponse.length) {
-          streamingContent.value = fullResponse.substring(0, i + 1);
+          conv.streamingContent = fullResponse.substring(0, i + 1);
           i++;
           scrollToBottom();
           setTimeout(typeWriter, typingSpeed + Math.random() * 20);
         } else {
-          isStreaming.value = false;
-          messages.value.push({
+          conv.isStreaming = false;
+          conv.streamingContent = '';
+          conv.messages.push({
             role: 'ai',
             message: fullResponse,
             createdAt: new Date().toISOString()
           });
           scrollToBottom();
+          
+          // 更新当前会话
+          if (activeConversationId.value && conv.messages.length > 0) {
+            conv.updatedAt = new Date().toISOString();
+            
+            // 将会话移到列表顶部
+            const index = conversations.value.findIndex(c => c.id === activeConversationId.value);
+            if (index > 0) {
+              const [currentConv] = conversations.value.splice(index, 1);
+              conversations.value.unshift(currentConv);
+            }
+          }
+          
+          saveConversationsToStorage();
         }
       };
 
       setTimeout(typeWriter, 150);
     } else {
-      isStreaming.value = false;
-      isThinking.value = false;
+      conv.isStreaming = false;
+      conv.isThinking = false;
       ElMessage.error(result.message || `${functionName}失败`);
     }
   } catch (error) {
-    isStreaming.value = false;
-    isThinking.value = false;
+    conv.isStreaming = false;
+    conv.isThinking = false;
     ElMessage.error(`${functionName}失败，请检查网络连接`);
   }
 };
@@ -408,11 +454,17 @@ const loadConversations = async () => {
   const storedConversations = loadConversationsFromStorage();
   
   if (storedConversations.length > 0) {
-    conversations.value = storedConversations;
+    // 为每个会话添加默认状态字段，确保向后兼容
+    conversations.value = storedConversations.map(conv => ({
+      ...conv,
+      isThinking: conv.isThinking || false,
+      isStreaming: conv.isStreaming || false,
+      streamingContent: conv.streamingContent || ''
+    }));
     
     // 如果有会话且当前没有活跃会话，选择第一个
     if (!activeConversationId.value) {
-      selectConversation(storedConversations[0]);
+      selectConversation(conversations.value[0]);
     }
   }
 };
@@ -421,21 +473,22 @@ const loadConversations = async () => {
 
 const selectConversation = (conv: any) => {
   activeConversationId.value = conv.id;
-  messages.value = conv.messages;
   scrollToBottom();
 };
 
 const createNewConversation = () => {
   const newId = 'conv_' + Date.now().toString() + '_' + Math.random().toString(36).slice(2, 7);
   activeConversationId.value = newId;
-  messages.value = [];
   
-  // 立即将新会话添加到列表开头
+  // 立即将新会话添加到列表开头，包含会话独立状态
   const newConversation = {
     id: newId,
     title: '新会话',
     messages: [],
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    isThinking: false,
+    isStreaming: false,
+    streamingContent: ''
   };
   conversations.value.unshift(newConversation);
   
@@ -453,7 +506,6 @@ const clearConversation = async () => {
   try {
     // 清除所有会话
     conversations.value = [];
-    messages.value = [];
     activeConversationId.value = null;
     
     // 清除 localStorage
@@ -466,19 +518,43 @@ const clearConversation = async () => {
 };
 
 const sendMessage = async () => {
-  if (!inputMessage.value.trim() || isStreaming.value) {
+  if (!inputMessage.value.trim()) {
     return;
   }
 
   const userMessage = inputMessage.value.trim();
   inputMessage.value = '';
-  isStreaming.value = true;
-  isThinking.value = true;
-  streamingContent.value = '';
 
-  const isFirstMessage = messages.value.length === 0;
+  // 如果没有活跃会话，先创建一个
+  if (!activeConversationId.value) {
+    const newId = 'conv_' + Date.now().toString() + '_' + Math.random().toString(36).slice(2, 7);
+    activeConversationId.value = newId;
+    
+    // 立即将新会话添加到列表开头
+    const newConversation = {
+      id: newId,
+      title: userMessage.length > 30 ? userMessage.substring(0, 30) + '...' : userMessage,
+      messages: [],
+      updatedAt: new Date().toISOString(),
+      isThinking: false,
+      isStreaming: false,
+      streamingContent: ''
+    };
+    conversations.value.unshift(newConversation);
+  }
 
-  messages.value.push({
+  // 获取当前会话
+  const conv = currentConversation.value;
+  if (!conv) return;
+
+  // 设置会话状态
+  conv.isThinking = true;
+  conv.isStreaming = true;
+  conv.streamingContent = '';
+
+  const isFirstMessage = conv.messages.length === 0;
+
+  conv.messages.push({
     role: 'user',
     message: userMessage,
     createdAt: new Date().toISOString()
@@ -491,53 +567,56 @@ const sendMessage = async () => {
         projectId: selectedProjectId.value
       });
     
+    // 先设置 isThinking 为 false
+    conv.isThinking = false;
+    
+    let fullResponse = '';
+    
+    // 尝试从 chatResult.data 获取响应
     if (chatResult.data) {
-      isThinking.value = false;
-      
-      const fullResponse = chatResult.data;
+      fullResponse = chatResult.data;
+    } else {
+      // 如果没有 data，尝试把整个响应作为字符串
+      fullResponse = typeof chatResult === 'string' ? chatResult : JSON.stringify(chatResult);
+    }
+    
+    // 只要有响应就处理
+    if (fullResponse && fullResponse.length > 0) {
       let i = 0;
       const typingSpeed = 20;
       
       const typeWriter = () => {
         if (i < fullResponse.length) {
-          streamingContent.value = fullResponse.substring(0, i + 1);
+          conv.streamingContent = fullResponse.substring(0, i + 1);
           i++;
           scrollToBottom();
           setTimeout(typeWriter, typingSpeed + Math.random() * 20);
         } else {
-          isStreaming.value = false;
-          messages.value.push({
+          conv.isStreaming = false;
+          conv.streamingContent = '';
+          conv.messages.push({
             role: 'ai',
             message: fullResponse,
             createdAt: new Date().toISOString()
           });
-          streamingContent.value = '';
           scrollToBottom();
           
-          if (isFirstMessage && !activeConversationId.value) {
-            createNewConversation();
-          }
-          
           // 更新当前会话的标题和消息
-          if (activeConversationId.value && messages.value.length > 0) {
-            const currentConv = conversations.value.find(c => c.id === activeConversationId.value);
-            if (currentConv) {
-              // 用第一条用户消息作为标题
-              const firstUserMsg = messages.value.find(m => m.role === 'user');
-              if (firstUserMsg) {
-                currentConv.title = firstUserMsg.message.length > 30 
-                  ? firstUserMsg.message.substring(0, 30) + '...' 
-                  : firstUserMsg.message;
-              }
-              currentConv.messages = [...messages.value];
-              currentConv.updatedAt = new Date().toISOString();
-              
-              // 将会话移到列表顶部
-              const index = conversations.value.findIndex(c => c.id === activeConversationId.value);
-              if (index > 0) {
-                const [conv] = conversations.value.splice(index, 1);
-                conversations.value.unshift(conv);
-              }
+          if (activeConversationId.value && conv.messages.length > 0) {
+            // 用第一条用户消息作为标题
+            const firstUserMsg = conv.messages.find((m: any) => m.role === 'user');
+            if (firstUserMsg) {
+              conv.title = firstUserMsg.message.length > 30 
+                ? firstUserMsg.message.substring(0, 30) + '...' 
+                : firstUserMsg.message;
+            }
+            conv.updatedAt = new Date().toISOString();
+            
+            // 将会话移到列表顶部
+            const index = conversations.value.findIndex(c => c.id === activeConversationId.value);
+            if (index > 0) {
+              const [currentConv] = conversations.value.splice(index, 1);
+              conversations.value.unshift(currentConv);
             }
           }
           
@@ -548,20 +627,19 @@ const sendMessage = async () => {
       
       setTimeout(typeWriter, 150);
     } else {
-      isStreaming.value = false;
-      isThinking.value = false;
-      messages.value.push({
+      conv.isStreaming = false;
+      conv.messages.push({
         role: 'ai',
         message: '抱歉，我暂时无法回答这个问题，请稍后重试。',
         createdAt: new Date().toISOString()
       });
-      ElMessage.error(chatResult.message || '请求失败');
+      ElMessage.error('没有获取到AI响应');
     }
-  } catch {
-    isStreaming.value = false;
-    isThinking.value = false;
+  } catch (error) {
+    conv.isStreaming = false;
+    conv.isThinking = false;
     ElMessage.error('发送失败，请检查网络连接');
-    messages.value.push({
+    conv.messages.push({
       role: 'ai',
       message: '抱歉，我暂时无法回答这个问题，请稍后重试。您可以尝试：\n1. 检查网络连接\n2. 确认后端服务是否正常启动\n3. 查看控制台是否有错误信息',
       createdAt: new Date().toISOString()
