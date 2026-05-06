@@ -145,26 +145,22 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import {
-  Folder,
-  Document,
-  Warning,
-  CircleClose,
-  CircleCheck,
-} from '@element-plus/icons-vue';
+import { Folder, Document, Warning, CircleClose, CircleCheck } from '@element-plus/icons-vue';
 import * as echarts from 'echarts';
+import apiClient from '../utils/api';
+import type { Project, DashboardStats, RiskAlert } from '../types';
 
 const router = useRouter();
 
-const stats = ref({
+const stats = ref<DashboardStats>({
   totalProjects: 0,
   totalTasks: 0,
   totalRisks: 0,
   totalBugs: 0
 });
 
-const projects = ref<any[]>([]);
-const riskAlerts = ref<any[]>([]);
+const projects = ref<Project[]>([]);
+const riskAlerts = ref<RiskAlert[]>([]);
 
 const projectChartRef = ref<HTMLElement | null>(null);
 const taskChartRef = ref<HTMLElement | null>(null);
@@ -198,26 +194,7 @@ const getStatusName = (status: string) => {
 
 const fetchDashboardData = async () => {
   try {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-      console.error('未找到token，请先登录');
-      return;
-    }
-
-    const projectsResponse = await fetch('http://localhost:8080/api/project/list', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    if (!projectsResponse.ok) {
-      console.error('获取项目列表失败:', projectsResponse.status, projectsResponse.statusText);
-      if (projectsResponse.status === 403) {
-        console.error('403错误:可能是token无效或已过期，请重新登录');
-      }
-      return;
-    }
-    
-    const projectsResult = await projectsResponse.json();
+    const projectsResult: any = await apiClient.get('/project/list');
     if (projectsResult.success) {
       projects.value = projectsResult.data || [];
       stats.value.totalProjects = projectsResult.data.length;
@@ -227,36 +204,27 @@ const fetchDashboardData = async () => {
     let totalRisks = 0;
     let totalBugs = 0;
 
-    for (const project of projectsResult.data || []) {
-      const tasksResponse = await fetch(`http://localhost:8080/api/task/project/${project.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (tasksResponse.ok) {
-        const tasksResult = await tasksResponse.json();
+    for (const project of projects.value) {
+      try {
+        const tasksResult: any = await apiClient.get(`/task/project/${project.id}`);
         if (tasksResult.success) {
           totalTasks += tasksResult.data.length;
         }
-      }
+      } catch { /* ignore */ }
 
-      const risksResponse = await fetch(`http://localhost:8080/api/risk/project/${project.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (risksResponse.ok) {
-        const risksResult = await risksResponse.json();
+      try {
+        const risksResult: any = await apiClient.get(`/risk/project/${project.id}`);
         if (risksResult.success) {
           totalRisks += risksResult.data.length;
         }
-      }
+      } catch { /* ignore */ }
 
-      const bugsResponse = await fetch(`http://localhost:8080/api/bug/project/${project.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (bugsResponse.ok) {
-        const bugsResult = await bugsResponse.json();
+      try {
+        const bugsResult: any = await apiClient.get(`/bug/project/${project.id}`);
         if (bugsResult.success) {
           totalBugs += bugsResult.data.length;
         }
-      }
+      } catch { /* ignore */ }
     }
 
     stats.value.totalTasks = totalTasks;
@@ -270,8 +238,6 @@ const fetchDashboardData = async () => {
 };
 
 const updateCharts = () => {
-  const chartColor = '#409EFF';
-
   if (projectChart) {
     projectChart.setOption({
       tooltip: { trigger: 'item', confine: true },
@@ -354,27 +320,23 @@ const checkRiskAlerts = async () => {
   riskAlerts.value = [];
 
   for (const project of projects.value) {
-    const token = localStorage.getItem('token');
-
-    const tasksResponse = await fetch(`http://localhost:8080/api/task/project/${project.id}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const tasksResult = await tasksResponse.json();
-
-    if (tasksResult.success) {
-      const overdueTasks = tasksResult.data.filter((t: any) => {
-        if (!t.endDate || t.status === 'done') return false;
-        return new Date(t.endDate) < new Date();
-      });
-
-      for (const task of overdueTasks) {
-        riskAlerts.value.push({
-          title: `项目"${project.name}"存在延期任务`,
-          description: `任务"${task.name}"已过期，但状态为"${getStatusName(task.status)}"`,
-          type: 'warning'
+    try {
+      const tasksResult: any = await apiClient.get(`/task/project/${project.id}`);
+      if (tasksResult.success) {
+        const overdueTasks = tasksResult.data.filter((t: any) => {
+          if (!t.endDate || t.status === 'done') return false;
+          return new Date(t.endDate) < new Date();
         });
+
+        for (const task of overdueTasks) {
+          riskAlerts.value.push({
+            title: `项目"${project.name}"存在延期任务`,
+            description: `任务"${task.name}"已过期，但状态为"${getStatusName(task.status)}"`,
+            type: 'warning'
+          });
+        }
       }
-    }
+    } catch { /* ignore */ }
   }
 
   if (riskAlerts.value.length === 0) {

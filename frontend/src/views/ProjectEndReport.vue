@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="project-end-report">
     <el-card>
       <template #header>
@@ -400,6 +400,7 @@ import {
   CircleClose,
   RefreshLeft
 } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 import html2pdf from 'html2pdf.js';
 
 const route = useRoute();
@@ -437,10 +438,7 @@ const formatDate = (date: string) => {
 const generateReport = async () => {
   loading.value = true;
   try {
-    const response = await fetch(`http://localhost:8080/api/project-retrospective/report/${projectId}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get(`/project-retrospective/report/${projectId}`);
     if (result.success) {
       report.value = result.data;
       ElMessage.success('报告生成成功');
@@ -457,26 +455,22 @@ const generateReport = async () => {
 const exportReport = async () => {
   exporting.value = true;
   try {
-    const response = await fetch(`http://localhost:8080/api/project-retrospective/report/export/${projectId}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    const response = await apiClient.get(`/project-retrospective/report/export/${projectId}`, {
+      responseType: 'blob'
     });
 
-    if (response.ok) {
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `project-end-report-${projectId}.html`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      ElMessage.success('导出成功');
-    } else {
-      ElMessage.error('导出失败');
-    }
+    const blob = response;
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `project-end-report-${projectId}.html`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    ElMessage.success('导出成功');
   } catch (error) {
-    ElMessage.error('网络错误');
+    ElMessage.error('导出失败');
   } finally {
     exporting.value = false;
   }

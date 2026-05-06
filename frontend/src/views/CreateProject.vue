@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="create-project">
     <el-card class="form-card">
       <template #header>
@@ -122,6 +122,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { MagicStick, Check, Close, DocumentAdd, Star } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 import { getRoleType } from '../utils/rolePermission';
 
 const router = useRouter();
@@ -129,6 +130,7 @@ const projectFormRef = ref();
 const aiLoading = ref(false);
 const createLoading = ref(false);
 const aiSuggestion = ref('');
+const token = localStorage.getItem('token') || '';
 
 const projectForm = ref({
   name: '',
@@ -152,7 +154,7 @@ const formRules = {
   dateRange: [
     { required: true, message: '请选择项目周期', trigger: 'change' },
     {
-      validator: (rule: any, value: any, callback: any) => {
+      validator: (_rule: any, value: any, callback: any) => {
         if (!value || value.length < 2) {
           callback(new Error('请选择项目周期'));
         } else {
@@ -172,34 +174,20 @@ const getAISuggestion = async () => {
 
   aiLoading.value = true;
   try {
-    const token = localStorage.getItem('token');
     if (!token) {
       ElMessage.error('请先登录');
       return;
     }
 
-    const response = await fetch('http://localhost:8080/api/ai/suggest-plan', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        projectName: projectForm.value.name,
-        coreGoal: projectForm.value.description
-      })
+    const apiResult: any = await apiClient.post('/ai/suggest-plan', {
+      projectName: projectForm.value.name,
+      coreGoal: projectForm.value.description
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const result = await response.json();
-    if (result.success) {
-      aiSuggestion.value = result.data?.aiSuggestion || JSON.stringify(result.data);
+    if (apiResult.success) {
+      aiSuggestion.value = apiResult.data?.aiSuggestion || JSON.stringify(apiResult.data);
       ElMessage.success('AI推荐完成！');
     } else {
-      ElMessage.error(result.message || 'AI推荐失败，请稍后重试');
+      ElMessage.error(apiResult.message || 'AI推荐失败，请稍后重试');
     }
   } catch (error: any) {
     console.error('AI推荐错误:', error);
@@ -242,8 +230,6 @@ const createProject = async () => {
     }
 
     createLoading.value = true;
-    
-    const token = localStorage.getItem('token');
     if (!token) {
       ElMessage.error('请先登录');
       createLoading.value = false;
@@ -262,31 +248,16 @@ const createProject = async () => {
 
     console.log('发送项目数据:', submitData);
     
-    const response = await fetch('http://localhost:8080/api/project/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(submitData)
-    });
-
-    console.log('响应状态:', response.status);
+    const apiResult: any = await apiClient.post('/project/create', submitData);
+    console.log('响应数据:', apiResult);
     
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    
-    const result = await response.json();
-    console.log('响应数据:', result);
-    
-    if (result.success) {
+    if (apiResult.success) {
       ElMessage.success('创建项目成功！');
       setTimeout(() => {
         router.push('/projects');
       }, 500);
     } else {
-      ElMessage.error(result.message || '创建项目失败');
+      ElMessage.error(apiResult.message || '创建项目失败');
     }
   } catch (error: any) {
     console.error('创建项目错误:', error);

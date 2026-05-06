@@ -4,10 +4,10 @@
  */
 
 import {
-  Folder, Plus, Document, Edit, Calendar, List, Warning, 
-  Flag, ArrowLeft, ArrowRight, TrendCharts, Reading, 
-  ChatDotRound, Upload, UploadFilled, Delete, MagicStick,
-  FolderOpened, Operation, Files, Box, Timer, View, User,
+  Folder, Plus, Document, Edit, Calendar, List, Warning,
+  Flag, TrendCharts, Reading,
+  ChatDotRound, Upload, UploadFilled, MagicStick,
+  Operation, Files, Box, Timer, View, User,
   House
 } from '@element-plus/icons-vue';
 
@@ -80,8 +80,9 @@ export const SYSTEM_MENUS: MenuItem[] = [
     icon: House,
     roles: ['admin', 'pm', 'developer', 'tester', 'product', 'designer', 'guest']
   },
+  
   // ------------------------------
-  // 项目管理模块 - 所有项目相关角色
+  // 项目管理模块
   // ------------------------------
   {
     index: '/projects',
@@ -96,10 +97,8 @@ export const SYSTEM_MENUS: MenuItem[] = [
     roles: ['admin', 'pm']
   },
   
-
-  
   // ------------------------------
-  // 系统管理模块 - 仅管理员和项目经理
+  // 系统管理模块
   // ------------------------------
   {
     index: '/users',
@@ -115,7 +114,7 @@ export const SYSTEM_MENUS: MenuItem[] = [
   },
   
   // ------------------------------
-  // AI助手模块 - 大部分角色（除了访客）
+  // AI助手模块
   // ------------------------------
   {
     index: 'ai',
@@ -148,6 +147,101 @@ export const SYSTEM_MENUS: MenuItem[] = [
         roles: ['admin', 'pm']
       }
     ]
+  }
+];
+
+// 仅用于权限验证的隐藏路由配置（不显示在菜单中）
+const hiddenPermissionRoutes: MenuItem[] = [
+  // 项目详情页
+  {
+    index: '/project/:id',
+    title: '项目详情',
+    icon: Document,
+    roles: ['admin', 'pm', 'developer', 'tester', 'product', 'designer', 'guest']
+  },
+  // 需求调研
+  {
+    index: '/project/:id/requirement',
+    title: '需求调研',
+    icon: Reading,
+    roles: ['admin', 'pm', 'developer', 'tester', 'product', 'designer', 'guest']
+  },
+  // 可行性分析
+  {
+    index: '/project/:id/feasibility',
+    title: '可行性分析',
+    icon: TrendCharts,
+    roles: ['admin', 'pm', 'product', 'guest']
+  },
+  // 任务管理/进度追踪
+  {
+    index: '/project/:id/tasks',
+    title: '任务管理',
+    icon: List,
+    roles: ['admin', 'pm', 'developer', 'tester', 'product', 'designer', 'guest']
+  },
+  // 甘特图
+  {
+    index: '/project/:id/gantt',
+    title: '甘特图',
+    icon: Calendar,
+    roles: ['admin', 'pm', 'developer', 'tester', 'product', 'designer', 'guest']
+  },
+  // 看板
+  {
+    index: '/project/:id/kanban',
+    title: '看板',
+    icon: Box,
+    roles: ['admin', 'pm', 'developer', 'tester', 'product', 'designer', 'guest']
+  },
+  // 风险管理
+  {
+    index: '/project/:id/risks',
+    title: '风险管理',
+    icon: Warning,
+    roles: ['admin', 'pm', 'developer', 'tester', 'guest']
+  },
+  // 缺陷管理
+  {
+    index: '/project/:id/bugs',
+    title: '缺陷管理',
+    icon: Flag,
+    roles: ['admin', 'pm', 'developer', 'tester', 'product', 'guest']
+  },
+  // 变更管理
+  {
+    index: '/project/:id/changes',
+    title: '变更管理',
+    icon: Edit,
+    roles: ['admin', 'pm', 'developer', 'product', 'guest']
+  },
+  // 交付验收
+  {
+    index: '/project/:id/delivery',
+    title: '交付验收',
+    icon: Files,
+    roles: ['admin', 'pm', 'developer', 'guest']
+  },
+  // 文档归档
+  {
+    index: '/project/:id/documents',
+    title: '文档归档',
+    icon: Upload,
+    roles: ['admin', 'pm', 'developer', 'tester', 'product', 'designer', 'guest']
+  },
+  // 项目复盘
+  {
+    index: '/project/:id/retrospective',
+    title: '项目复盘',
+    icon: Timer,
+    roles: ['admin', 'pm', 'product', 'guest']
+  },
+  // 项目结束报告
+  {
+    index: '/project/:id/end-report',
+    title: '项目结束报告',
+    icon: View,
+    roles: ['admin', 'pm', 'product', 'guest']
   }
 ];
 
@@ -209,20 +303,33 @@ export function hasPermission(role: RoleType, routePath: string): boolean {
     return true;
   }
   
-  // 遍历所有菜单，检查是否有权限
-  for (const menu of SYSTEM_MENUS) {
-    // 直接匹配或匹配通配符路由
-    if (matchRoute(menu.index, routePath) && menu.roles.includes(role)) {
-      return true;
-    }
-    // 检查子菜单
-    if (menu.children) {
-      for (const child of menu.children) {
-        if (matchRoute(child.index, routePath) && child.roles.includes(role)) {
-          return true;
+  // 检查是否是项目详情相关的基础路由（用于权限验证）
+  const checkRoutePermission = (menus: MenuItem[]): boolean => {
+    for (const menu of menus) {
+      // 直接匹配或匹配通配符路由
+      if (matchRoute(menu.index, routePath) && menu.roles.includes(role)) {
+        return true;
+      }
+      // 检查子菜单
+      if (menu.children) {
+        for (const child of menu.children) {
+          if (matchRoute(child.index, routePath) && child.roles.includes(role)) {
+            return true;
+          }
         }
       }
     }
+    return false;
+  };
+  
+  // 检查显示的菜单
+  if (checkRoutePermission(SYSTEM_MENUS)) {
+    return true;
+  }
+  
+  // 检查隐藏的权限路由
+  if (checkRoutePermission(hiddenPermissionRoutes)) {
+    return true;
   }
   
   return false;
@@ -287,7 +394,7 @@ export function getRoleName(roleCode: string): string {
 }
 
 // 获取当前用户的首页路径（按角色）
-export function getHomePath(role: RoleType): string {
+export function getHomePath(_role: RoleType): string {
   return '/dashboard';
 }
 

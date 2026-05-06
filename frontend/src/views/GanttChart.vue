@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="gantt-page">
     <!-- 页面标题 -->
     <div class="page-header">
@@ -90,10 +90,10 @@
               <span>任务列表</span>
             </div>
           </div>
-          <div class="task-list" ref="taskListEl" @wheel.prevent="handleWheel">
+          <div class="task-list" @wheel.prevent="handleWheel">
             <div
               v-for="(task, idx) in filteredTasks"
-              :key="task.id"
+              :key="task.id ?? idx"
               class="task-row"
               :class="{ milestone: task.isMilestone }"
               :style="{ paddingLeft: (task.level * 20 + 16) + 'px' }"
@@ -105,7 +105,7 @@
                 @click.stop="toggleFold(task); renderChart()"
               >
                 <el-icon :size="14">
-                  <component :is="collapsedTasks.has(task.id) ? ArrowRight : ArrowLeft" />
+                  <component :is="collapsedTasks.has(task.id ?? 0) ? ArrowRight : ArrowLeft" />
                 </el-icon>
               </div>
               <div v-else class="fold-btn placeholder"></div>
@@ -243,16 +243,17 @@ import {
   Folder,
   ArrowRight
 } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
+import type { Task, GanttTask, TaskStatus } from '../types';
 
 const route = useRoute();
 const router = useRouter();
 const projectId = Number(route.params.id);
 
 const chartEl = ref<HTMLElement | null>(null);
-const taskListEl = ref<HTMLElement | null>(null);
 let chart: echarts.ECharts | null = null;
 
-const rawTasks = ref<any[]>([]);
+const rawTasks = ref<Task[]>([]);
 const showTaskDialog = ref(false);
 const showMilestoneDialog = ref(false);
 const isEditTask = ref(false);
@@ -263,7 +264,7 @@ const searchQuery = ref('');
 const saving = ref(false);
 
 const taskForm = ref({
-  id: '',
+  id: null as number | null,
   name: '',
   description: '',
   parentId: null as number | null,
@@ -271,7 +272,8 @@ const taskForm = ref({
   endDate: '',
   duration: 1,
   priority: 'medium',
-  status: 'todo',
+  status: 'todo' as TaskStatus,
+  projectId: projectId,
   isMilestone: false,
   level: 0,
   progress: 0
@@ -292,15 +294,23 @@ const COLORS: Record<string, { bg: string; border: string; text: string }> = {
   pending: { bg: '#e2e3e5', border: '#6c757d', text: '#383d41' }
 };
 
-const buildTaskTree = (tasks: any[]) => {
-  const map = new Map<number, any>();
-  const roots: any[] = [];
-  tasks.forEach(t => map.set(t.id, { ...t, children: [], hasChildren: false }));
+const buildTaskTree = (tasks: Task[]) => {
+  const map = new Map<number, GanttTask>();
+  const roots: GanttTask[] = [];
   tasks.forEach(t => {
-    const node = map.get(t.id);
+    const taskId = t.id ?? Date.now() + Math.random();
+    map.set(taskId, { ...t, id: taskId, children: [], hasChildren: false, level: 0, isMilestone: !!t.milestoneId, progress: 0 } as GanttTask);
+  });
+  tasks.forEach(t => {
+    const taskId = t.id ?? 0;
+    const node = map.get(taskId);
+    if (!node) return;
     if (t.parentId && map.has(t.parentId)) {
-      map.get(t.parentId).children.push(node);
-      map.get(t.parentId).hasChildren = true;
+      const parent = map.get(t.parentId);
+      if (parent) {
+        parent.children.push(node);
+        parent.hasChildren = true;
+      }
     } else {
       roots.push(node);
     }
@@ -311,44 +321,45 @@ const buildTaskTree = (tasks: any[]) => {
 const allTaskCount = computed(() => rawTasks.value.length);
 
 const flatAllTasks = computed(() => {
-  const result: any[] = [];
+  const result: GanttTask[] = [];
   const { roots } = buildTaskTree(rawTasks.value);
-  const walk = (nodes: any[]) => { for (const n of nodes) { result.push(n); if (n.hasChildren) walk(n.children); } };
+  const walk = (nodes: GanttTask[]) => { for (const n of nodes) { result.push(n); if (n.hasChildren) walk(n.children); } };
   walk(roots);
   return result;
 });
 
 const filteredTasks = computed(() => {
   const { roots } = buildTaskTree(rawTasks.value);
-  const result: any[] = [];
-  const walk = (nodes: any[]) => {
+  const result: GanttTask[] = [];
+  const walk = (nodes: GanttTask[]) => {
     for (const node of nodes) {
       let match = true;
       if (filterStatus.value && node.status !== filterStatus.value) match = false;
       if (filterPriority.value && node.priority !== filterPriority.value) match = false;
       if (searchQuery.value && !node.name.toLowerCase().includes(searchQuery.value.toLowerCase())) match = false;
       if (match) result.push(node);
-      if (node.hasChildren && !collapsedTasks.value.has(node.id)) walk(node.children);
+      if (node.hasChildren && !collapsedTasks.value.has(node.id ?? 0)) walk(node.children);
     }
   };
   walk(roots);
   return result;
 });
 
-const toggleFold = (task: any) => {
-  if (collapsedTasks.value.has(task.id)) collapsedTasks.value.delete(task.id);
-  else collapsedTasks.value.add(task.id);
+const toggleFold = (task: GanttTask) => {
+  const taskId = task.id ?? 0;
+  if (collapsedTasks.value.has(taskId)) collapsedTasks.value.delete(taskId);
+  else collapsedTasks.value.add(taskId);
 };
 
 const expandAll = () => { collapsedTasks.value.clear(); renderChart(); };
 const collapseAll = () => {
   const { roots } = buildTaskTree(rawTasks.value);
-  const collect = (nodes: any[]) => { for (const n of nodes) { if (n.hasChildren) { collapsedTasks.value.add(n.id); collect(n.children); } } };
+  const collect = (nodes: GanttTask[]) => { for (const n of nodes) { if (n.hasChildren) { collapsedTasks.value.add(n.id ?? 0); collect(n.children); } } };
   collect(roots);
   renderChart();
 };
 
-const formatTaskDates = (task: any) => {
+const formatTaskDates = (task: Task) => {
   if (task.startDate && task.endDate) {
     const s = new Date(task.startDate);
     const e = new Date(task.endDate);
@@ -357,12 +368,12 @@ const formatTaskDates = (task: any) => {
   return '无日期';
 };
 
-const getStatusType = (task: any) => {
+const getStatusType = (task: Task) => {
   const m: Record<string, string> = { todo: 'info', pending: 'info', in_progress: 'warning', review: 'primary', done: 'success', completed: 'success' };
   return m[task.status] || 'info';
 };
 
-const getStatusText = (task: any) => {
+const getStatusText = (task: Task) => {
   const m: Record<string, string> = { todo: '待处理', pending: '待处理', in_progress: '进行中', review: '待审核', done: '已完成', completed: '已完成' };
   return m[task.status] || task.status;
 };
@@ -402,8 +413,18 @@ const renderChart = () => {
   let minDate = new Date();
   let maxDate = new Date();
   
-  const validStartDates = tasks.filter(t => t.startDate).map(t => new Date(t.startDate).getTime());
-  const validEndDates = tasks.filter(t => t.endDate).map(t => new Date(t.endDate).getTime());
+  const validStartDates = tasks
+    .filter(t => t.startDate)
+    .map(t => {
+      const startDate = t.startDate as string;
+      return new Date(startDate).getTime();
+    });
+  const validEndDates = tasks
+    .filter(t => t.endDate)
+    .map(t => {
+      const endDate = t.endDate as string;
+      return new Date(endDate).getTime();
+    });
   const allDates = [...validStartDates, ...validEndDates];
   
   if (allDates.length > 0) {
@@ -683,16 +704,13 @@ const handleWheel = (e: WheelEvent) => {
 
 const fetchTasks = async () => {
   try {
-    const res = await fetch(`http://localhost:8080/api/task/project/${projectId}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    const result = await res.json();
-    console.log('获取任务数据:', result);
-    if (result.success) {
-      rawTasks.value = result.data.map((t: any) => ({ ...t, level: t.level ?? (t.parentId ? 1 : 0) }));
+    const apiResult: any = await apiClient.get(`/task/project/${projectId}`);
+    console.log('获取任务数据:', apiResult);
+    if (apiResult.success) {
+      rawTasks.value = apiResult.data.map((t: any) => ({ ...t, level: t.level ?? (t.parentId ? 1 : 0) }));
       nextTick(() => renderChart());
     } else {
-      ElMessage.error(result.message || '获取任务失败');
+      ElMessage.error(apiResult.message || '获取任务失败');
       // 添加一些模拟数据用于测试
       addMockData();
     }
@@ -706,11 +724,11 @@ const fetchTasks = async () => {
 
 const addMockData = () => {
   rawTasks.value = [
-    { id: 1, name: '项目启动', startDate: '2026-04-20', endDate: '2026-04-25', progress: 100, status: 'done', parentId: null, level: 0 },
-    { id: 2, name: '需求分析', startDate: '2026-04-22', endDate: '2026-04-30', progress: 60, status: 'in_progress', parentId: null, level: 0 },
-    { id: 3, name: '技术设计', startDate: '2026-04-28', endDate: '2026-05-10', progress: 30, status: 'in_progress', parentId: null, level: 0 },
-    { id: 4, name: '开发阶段', startDate: '2026-05-05', endDate: '2026-05-20', progress: 0, status: 'todo', parentId: null, level: 0 },
-    { id: 5, name: 'MVP版本', startDate: '2026-04-30', endDate: '2026-04-30', progress: 0, status: 'todo', parentId: null, level: 0, isMilestone: true }
+    { id: 1, projectId, name: '项目启动', description: '', startDate: '2026-04-20', endDate: '2026-04-25', status: 'done', parentId: null } as Task,
+    { id: 2, projectId, name: '需求分析', description: '', startDate: '2026-04-22', endDate: '2026-04-30', status: 'in_progress', parentId: null } as Task,
+    { id: 3, projectId, name: '技术设计', description: '', startDate: '2026-04-28', endDate: '2026-05-10', status: 'in_progress', parentId: null } as Task,
+    { id: 4, projectId, name: '开发阶段', description: '', startDate: '2026-05-05', endDate: '2026-05-20', status: 'todo', parentId: null } as Task,
+    { id: 5, projectId, name: 'MVP版本', description: '', startDate: '2026-04-30', endDate: '2026-04-30', status: 'todo', parentId: null, milestoneId: 1 } as Task
   ];
   nextTick(() => renderChart());
 };
@@ -718,32 +736,47 @@ const addMockData = () => {
 const saveTask = async () => {
   saving.value = true;
   try {
-    const taskData = { ...taskForm.value, projectId, createdBy: JSON.parse(localStorage.getItem('user') || '{}').id };
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const taskData = { 
+      ...taskForm.value, 
+      projectId, 
+      createdBy: userData.id 
+    };
     
     // 先本地更新，让界面立即响应
-    if (isEditTask.value) {
+    if (isEditTask.value && taskForm.value.id !== null) {
       const taskIndex = rawTasks.value.findIndex(t => t.id === taskForm.value.id);
       if (taskIndex !== -1) {
-        rawTasks.value[taskIndex] = { ...rawTasks.value[taskIndex], ...taskForm.value };
+        const updateTask = { ...rawTasks.value[taskIndex] };
+        // 只更新Task类型兼容的字段
+        updateTask.name = taskForm.value.name;
+        updateTask.description = taskForm.value.description;
+        updateTask.parentId = taskForm.value.parentId;
+        updateTask.startDate = taskForm.value.startDate;
+        updateTask.endDate = taskForm.value.endDate;
+        updateTask.duration = taskForm.value.duration;
+        updateTask.priority = taskForm.value.priority as any;
+        updateTask.status = taskForm.value.status;
+        rawTasks.value[taskIndex] = updateTask;
         rawTasks.value = [...rawTasks.value];
         nextTick(() => renderChart());
       }
     }
     
-    const url = isEditTask.value ? 'http://localhost:8080/api/task/update' : 'http://localhost:8080/api/task/create';
-    const method = isEditTask.value ? 'PUT' : 'POST';
-    const res = await fetch(url, {
-      method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify(taskData)
-    });
-    const result = await res.json();
-    if (result.success) {
+    let apiResult: any;
+    if (isEditTask.value) {
+      apiResult = await apiClient.put('/task/update', taskData);
+    } else {
+      apiResult = await apiClient.post('/task/create', taskData);
+    }
+    
+    if (apiResult.success) {
       ElMessage.success(isEditTask.value ? '更新任务成功' : '创建任务成功');
       showTaskDialog.value = false;
       await fetchTasks();
       resetTaskForm();
     } else {
-      ElMessage.error(result.message || '操作失败');
+      ElMessage.error(apiResult.message || '操作失败');
       await fetchTasks();
     }
   } catch {
@@ -754,27 +787,37 @@ const saveTask = async () => {
   }
 };
 
-const editTask = (task: any) => {
+const editTask = (task: GanttTask) => {
   if (task.isMilestone) return;
   isEditTask.value = true;
-  taskForm.value = { ...task };
+  taskForm.value = {
+    id: task.id ?? null,
+    name: task.name,
+    description: task.description,
+    parentId: task.parentId ?? null,
+    startDate: task.startDate || '',
+    endDate: task.endDate || '',
+    duration: task.duration || 1,
+    priority: task.priority || 'medium',
+    status: task.status,
+    projectId: projectId,
+    isMilestone: task.isMilestone,
+    level: task.level,
+    progress: task.progress
+  };
   showTaskDialog.value = true;
 };
 
 const saveMilestone = async () => {
   saving.value = true;
   try {
-    const res = await fetch('http://localhost:8080/api/milestone/create', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify(milestoneForm.value)
-    });
-    const result = await res.json();
-    if (result.success) {
+    const apiResult: any = await apiClient.post('/milestone/create', milestoneForm.value);
+    if (apiResult.success) {
       ElMessage.success('创建里程碑成功');
       showMilestoneDialog.value = false;
       resetMilestoneForm();
     } else {
-      ElMessage.error(result.message || '操作失败');
+      ElMessage.error(apiResult.message || '操作失败');
     }
   } catch {
     ElMessage.error('网络错误');
@@ -784,7 +827,21 @@ const saveMilestone = async () => {
 };
 
 const resetTaskForm = () => {
-  taskForm.value = { id: '', name: '', description: '', parentId: null, startDate: '', endDate: '', duration: 1, priority: 'medium', status: 'todo', isMilestone: false, level: 0, progress: 0 };
+  taskForm.value = { 
+    id: null, 
+    name: '', 
+    description: '', 
+    parentId: null, 
+    startDate: '', 
+    endDate: '', 
+    duration: 1, 
+    priority: 'medium', 
+    status: 'todo' as TaskStatus,
+    projectId: projectId,
+    isMilestone: false, 
+    level: 0, 
+    progress: 0 
+  };
   isEditTask.value = false;
 };
 

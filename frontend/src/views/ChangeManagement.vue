@@ -86,6 +86,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ArrowLeft } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 
 const route = useRoute();
 const router = useRouter();
@@ -106,10 +107,7 @@ const changeDetail = ref<any>({});
 
 const fetchChangeRequests = async () => {
   try {
-    const response = await fetch(`http://localhost:8080/api/change-request/project/${projectId}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get(`/change-request/project/${projectId}`);
     if (result.success) {
       changeRequests.value = result.data;
     }
@@ -121,24 +119,15 @@ const fetchChangeRequests = async () => {
 const submitChange = async () => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const response = await fetch('http://localhost:8080/api/change-request/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({
-        projectId,
-        title: changeForm.value.title,
-        description: changeForm.value.description,
-        reason: changeForm.value.reason,
-        impact: changeForm.value.impact,
-        requesterId: user.id,
-        status: 'pending'
-      })
+    const result: any = await apiClient.post('/change-request/create', {
+      projectId,
+      title: changeForm.value.title,
+      description: changeForm.value.description,
+      reason: changeForm.value.reason,
+      impact: changeForm.value.impact,
+      requesterId: user.id,
+      status: 'pending'
     });
-
-    const result = await response.json();
     if (result.success) {
       ElMessage.success('变更请求提交成功');
       showChangeDialog.value = false;
@@ -155,16 +144,9 @@ const submitChange = async () => {
 const approveChange = async (change: any) => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const response = await fetch(`http://localhost:8080/api/change-request/approve/${change.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({ reviewerId: user.id })
+    const result: any = await apiClient.put(`/change-request/approve/${change.id}`, {
+      reviewerId: user.id
     });
-
-    const result = await response.json();
     if (result.success) {
       ElMessage.success('变更请求已批准');
       fetchChangeRequests();
@@ -179,16 +161,9 @@ const approveChange = async (change: any) => {
 const rejectChange = async (change: any) => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const response = await fetch(`http://localhost:8080/api/change-request/reject/${change.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({ reviewerId: user.id })
+    const result: any = await apiClient.put(`/change-request/reject/${change.id}`, {
+      reviewerId: user.id
     });
-
-    const result = await response.json();
     if (result.success) {
       ElMessage.success('变更请求已拒绝');
       fetchChangeRequests();

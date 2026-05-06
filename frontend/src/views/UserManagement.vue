@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="user-management">
     <el-card>
       <template #header>
@@ -94,6 +94,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { Plus, Refresh, Edit, Delete } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 import { ElMessage, ElMessageBox } from 'element-plus';
 
 const users = ref<any[]>([]);
@@ -140,15 +141,9 @@ const getRoleTagType = (roleId: number): string => {
 const fetchUsers = async () => {
   loading.value = true;
   try {
-    const token = localStorage.getItem('token');
-    console.log('正在获取用户列表...');
+console.log('正在获取用户列表...');
     
-    const response = await fetch('http://localhost:8080/api/user/list', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    console.log('用户列表响应状态:', response.status);
-    const result = await response.json();
+    const result: any = await apiClient.get('/user/list');
     console.log('用户列表响应结果:', result);
     
     if (result.success) {
@@ -190,26 +185,17 @@ const openEditDialog = (row: any) => {
 // 保存用户
 const saveUser = async () => {
   try {
-    const token = localStorage.getItem('token');
-    const userData = {
+const userData = {
       ...currentUser.value,
       status: currentUserStatus.value ? 1 : 0
     };
     
     const url = userData.id 
-      ? 'http://localhost:8080/api/user/update' 
-      : 'http://localhost:8080/api/user/register';
+      ? '/user/update' 
+      : '/user/register';
       
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(userData)
+    const result: any = await apiClient.post(url, userData)
     });
-    
-    const result = await response.json();
     if (result.success) {
       ElMessage.success(userData.id ? '更新成功' : '创建成功');
       showAddDialog.value = false;
@@ -231,14 +217,7 @@ const deleteUser = async (row: any) => {
       cancelButtonText: '取消',
       type: 'warning'
     });
-    
-    const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:8080/api/user/delete?id=${row.id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    const result = await response.json();
+const `/user/delete?id=${row.id}`: any = await apiClient.delete(response);
     if (result.success) {
       ElMessage.success('删除成功');
       fetchUsers();

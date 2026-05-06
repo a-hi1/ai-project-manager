@@ -83,6 +83,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ArrowLeft } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 
 const route = useRoute();
 const router = useRouter();
@@ -102,10 +103,7 @@ const deliverableDetail = ref<any>({});
 
 const fetchDeliverables = async () => {
   try {
-    const response = await fetch(`http://localhost:8080/api/deliverable/project/${projectId}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get(`/deliverable/project/${projectId}`);
     if (result.success) {
       deliverables.value = result.data;
     }
@@ -117,23 +115,14 @@ const fetchDeliverables = async () => {
 const submitDeliverable = async () => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const response = await fetch('http://localhost:8080/api/deliverable/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({
-        projectId,
-        name: deliverableForm.value.name,
-        description: deliverableForm.value.description,
-        filePath: deliverableForm.value.filePath,
-        submittedBy: user.id,
-        status: 'pending'
-      })
+    const result: any = await apiClient.post('/deliverable/create', {
+      projectId,
+      name: deliverableForm.value.name,
+      description: deliverableForm.value.description,
+      filePath: deliverableForm.value.filePath,
+      submittedBy: user.id,
+      status: 'pending'
     });
-
-    const result = await response.json();
     if (result.success) {
       ElMessage.success('交付物提交成功');
       showDeliverableDialog.value = false;
@@ -155,16 +144,9 @@ const viewDeliverable = (deliverable: any) => {
 const approveDeliverable = async (deliverable: any) => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const response = await fetch(`http://localhost:8080/api/deliverable/approve/${deliverable.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({ reviewerId: user.id })
+    const result: any = await apiClient.put(`/deliverable/approve/${deliverable.id}`, {
+      reviewerId: user.id
     });
-
-    const result = await response.json();
     if (result.success) {
       ElMessage.success('交付物已通过');
       fetchDeliverables();
@@ -179,16 +161,9 @@ const approveDeliverable = async (deliverable: any) => {
 const rejectDeliverable = async (deliverable: any) => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const response = await fetch(`http://localhost:8080/api/deliverable/reject/${deliverable.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({ reviewerId: user.id })
+    const result: any = await apiClient.put(`/deliverable/reject/${deliverable.id}`, {
+      reviewerId: user.id
     });
-
-    const result = await response.json();
     if (result.success) {
       ElMessage.success('交付物已拒绝');
       fetchDeliverables();

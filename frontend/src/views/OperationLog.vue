@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="operation-log">
     <el-card>
       <template #header>
@@ -45,6 +45,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { Refresh, ArrowLeft } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 import { ElMessage } from 'element-plus';
 
 const router = useRouter();
@@ -57,11 +58,7 @@ const total = ref(0);
 const fetchLogs = async () => {
   loading.value = true;
   try {
-    const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:8080/api/log/list', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get('/log/list');
     if (result.success) {
       logs.value = result.data || [];
       total.value = logs.value.length;

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="ai-chat-assistant">
     <div class="chat-layout">
       <!-- 侧边栏 -->
@@ -183,7 +183,6 @@
     <!-- 上传文档对话框 -->
     <el-dialog v-model="showUploadDialog" title="上传文档" width="500px">
       <el-upload
-        ref="uploadRef"
         class="upload-demo"
         drag
         :action="uploadUrl"
@@ -211,6 +210,7 @@ import { ref, nextTick, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ArrowLeft, ChatDotRound, Delete, Promotion, Upload, UploadFilled, Plus, FolderOpened, MagicStick, TrendCharts, Document, List, Reading } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 
 const router = useRouter();
 const messages = ref<any[]>([]);
@@ -222,7 +222,6 @@ const messagesContainer = ref<HTMLElement | null>(null);
 const token = localStorage.getItem('token') || '';
 const showUploadDialog = ref(false);
 const fileList = ref<any[]>([]);
-const uploadRef = ref();
 const conversations = ref<any[]>([]);
 const activeConversationId = ref<string | null>(null);
 const projects = ref<any[]>([]);
@@ -255,10 +254,7 @@ const getStatusType = (status: string) => {
 const loadProjects = async () => {
   loadingProjects.value = true;
   try {
-    const response = await fetch('http://localhost:8080/api/project/list', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get('/project/list');
     if (result.success) {
       projects.value = result.data;
     }
@@ -287,31 +283,7 @@ const callAIFunction = async (endpoint: string, functionName: string) => {
   isThinking.value = true;
 
   try {
-    const response = await fetch(`/api/ai/${endpoint}/${selectedProjectId.value}`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-
-    if (!response.ok) {
-      isStreaming.value = false;
-      isThinking.value = false;
-      if (response.status === 500) {
-        ElMessage.error(`${functionName}失败：AI 服务暂不可用，请检查 AI 服务配置`);
-      } else {
-        ElMessage.error(`${functionName}失败（HTTP ${response.status}）`);
-      }
-      return;
-    }
-
-    const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) {
-      isStreaming.value = false;
-      isThinking.value = false;
-      ElMessage.error(`${functionName}失败：服务器返回异常响应`);
-      return;
-    }
-
-    const result = await response.json();
+    const result: any = await apiClient.post(`/api/ai/${endpoint}/${selectedProjectId.value}`);
 
     if (result.success && result.data) {
       isThinking.value = false;
@@ -354,7 +326,7 @@ const generateDailyReport = () => callAIFunction('daily-report', '生成日报')
 const suggestTasks = () => callAIFunction('suggest-tasks', '任务建议');
 const summarizeProject = () => callAIFunction('summarize', '项目总结');
 
-const uploadUrl = 'http://localhost:8080/api/ai/upload-document';
+const uploadUrl = '/ai/upload-document';
 const uploadHeaders = computed(() => ({
   Authorization: `Bearer ${token}`
 }));
@@ -399,13 +371,7 @@ const useQuickQuestion = (question: string) => {
 
 const loadConversations = async () => {
   try {
-    const response = await fetch('http://localhost:8080/api/ai/conversation/history', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get('/ai/conversation/history');
     if (result.success) {
       // 保持当前会话ID和消息状态
       const currentId = activeConversationId.value;
@@ -458,7 +424,7 @@ const groupConversations = (allMessages: any[]) => {
   allMessages.forEach(msg => {
     if (msg.role === 'user' && !currentConvId) {
       // 新用户消息，创建新会话
-      currentConvId = 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      currentConvId = 'conv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
       currentTitle = msg.message.length > 30 ? msg.message.substring(0, 30) + '...' : msg.message;
       convMap.set(currentConvId, {
         id: currentConvId,
@@ -487,7 +453,7 @@ const selectConversation = (conv: any) => {
 };
 
 const createNewConversation = () => {
-  activeConversationId.value = 'conv_' + Date.now().toString() + '_' + Math.random().toString(36).substr(2,5);
+  activeConversationId.value = 'conv_' + Date.now().toString() + '_' + Math.random().toString(36).slice(2, 7);
   messages.value = [];
   ElMessage.success('新会话已创建');
 };
@@ -498,13 +464,7 @@ const loadConversationHistory = async () => {
 
 const clearConversation = async () => {
   try {
-    const response = await fetch('http://localhost:8080/api/ai/conversation/clear', {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.delete('/ai/conversation/clear');
     if (result.success) {
       conversations.value = [];
       messages.value = [];
@@ -529,7 +489,6 @@ const sendMessage = async () => {
   isThinking.value = true;
   streamingContent.value = '';
 
-  // 如果没有活跃会话，第一条消息创建会话
   const isFirstMessage = messages.value.length === 0;
 
   messages.value.push({
@@ -540,28 +499,15 @@ const sendMessage = async () => {
   scrollToBottom();
 
   try {
-    const response = await fetch('http://localhost:8080/api/ai/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
+    const chatResult: any = await apiClient.post('/ai/chat', {
         message: userMessage,
         projectId: selectedProjectId.value
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('请求失败');
-    }
-
-    const result = await response.json();
+      });
     
-    if (result.success) {
+    if (chatResult.success) {
       isThinking.value = false;
       
-      const fullResponse = result.data;
+      const fullResponse = chatResult.data;
       let i = 0;
       const typingSpeed = 20;
       
@@ -573,7 +519,6 @@ const sendMessage = async () => {
           setTimeout(typeWriter, typingSpeed + Math.random() * 20);
         } else {
           isStreaming.value = false;
-          // 直接添加AI回复到当前会话
           messages.value.push({
             role: 'ai',
             message: fullResponse,
@@ -582,12 +527,10 @@ const sendMessage = async () => {
           streamingContent.value = '';
           scrollToBottom();
           
-          // 如果是第一条消息，此时才真正创建会话记录
           if (isFirstMessage && !activeConversationId.value) {
             createNewConversation();
           }
           
-          // 重新加载会话历史
           loadConversationHistory();
         }
       };
@@ -601,9 +544,9 @@ const sendMessage = async () => {
         message: '抱歉，我暂时无法回答这个问题，请稍后重试。',
         createdAt: new Date().toISOString()
       });
-      ElMessage.error(result.message || '请求失败');
+      ElMessage.error(chatResult.message || '请求失败');
     }
-  } catch (error) {
+  } catch {
     isStreaming.value = false;
     isThinking.value = false;
     ElMessage.error('发送失败，请检查网络连接');
@@ -638,7 +581,7 @@ const handleUploadSuccess = (response: any) => {
   }
 };
 
-const handleUploadError = (error: any) => {
+const handleUploadError = (_error: any) => {
   ElMessage.error('上传失败，请检查网络连接');
 };
 

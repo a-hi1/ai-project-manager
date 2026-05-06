@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="feasibility-analysis">
     <el-card>
       <template #header>
@@ -178,7 +178,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { ArrowLeft, Plus, Edit, Delete, Search, DataAnalysis, Clock } from '@element-plus/icons-vue';
+import { ArrowLeft, Plus, Edit, Delete, DataAnalysis, Clock } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 
 const route = useRoute();
 const router = useRouter();
@@ -255,16 +256,12 @@ const openCreateDialog = () => {
 const fetchAnalyses = async () => {
   loading.value = true;
   try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:8080/api/feasibility-analysis/project/${projectId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
-    console.log('可行性分析列表响应:', result);
-    if (result.success) {
-      analyses.value = result.data || [];
+    const apiResult: any = await apiClient.get(`/feasibility-analysis/project/${projectId}`);
+    console.log('可行性分析列表响应:', apiResult);
+    if (apiResult.success) {
+      analyses.value = apiResult.data || [];
     } else {
-      ElMessage.error(result.message || '获取可行性分析列表失败');
+      ElMessage.error(apiResult.message || '获取可行性分析列表失败');
     }
   } catch (error) {
     console.error('获取可行性分析列表错误:', error);
@@ -287,28 +284,21 @@ const saveAnalysis = async () => {
     }
     analysisForm.value.projectId = projectId;
 
-    const url = isEdit.value ? 'http://localhost:8080/api/feasibility-analysis/update' : 'http://localhost:8080/api/feasibility-analysis/create';
-    const method = isEdit.value ? 'PUT' : 'POST';
+    let apiResult: any;
+    if (isEdit.value) {
+      apiResult = await apiClient.put('/feasibility-analysis/update', analysisForm.value);
+    } else {
+      apiResult = await apiClient.post('/feasibility-analysis/create', analysisForm.value);
+    }
     
-    console.log('提交数据:', analysisForm.value);
-    
-    const response = await fetch(url, {
-      method: method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify(analysisForm.value)
-    });
-    const result = await response.json();
-    console.log('保存响应:', result);
-    if (result.success) {
+    console.log('保存响应:', apiResult);
+    if (apiResult.success) {
       ElMessage.success(isEdit.value ? '编辑可行性分析成功' : '添加可行性分析成功');
       showCreateDialog.value = false;
       resetForm();
       await fetchAnalyses();
     } else {
-      ElMessage.error(result.message || (isEdit.value ? '编辑可行性分析失败' : '添加可行性分析失败'));
+      ElMessage.error(apiResult.message || (isEdit.value ? '编辑可行性分析失败' : '添加可行性分析失败'));
     }
   } catch (error) {
     console.error('保存错误:', error);
@@ -331,18 +321,12 @@ const deleteAnalysis = async (id: number) => {
       cancelButtonText: '取消',
       type: 'warning'
     });
-
-    const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:8080/api/feasibility-analysis/delete/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
-    if (result.success) {
+    const apiResult: any = await apiClient.delete(`/feasibility-analysis/delete/${id}`);
+    if (apiResult.success) {
       ElMessage.success('删除可行性分析成功');
       await fetchAnalyses();
     } else {
-      ElMessage.error(result.message || '删除可行性分析失败');
+      ElMessage.error(apiResult.message || '删除可行性分析失败');
     }
   } catch (error) {
     if (error !== 'cancel') {

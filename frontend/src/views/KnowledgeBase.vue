@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="knowledge-base">
     <el-card>
       <template #header>
@@ -111,13 +111,13 @@ import {
   View,
   Delete
 } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 
 const router = useRouter();
 const documents = ref<any[]>([]);
 const loading = ref(false);
 const showAddDialog = ref(false);
 const showDetailDialog = ref(false);
-const token = localStorage.getItem('token') || '';
 
 const searchForm = ref({
   keyword: ''
@@ -134,10 +134,7 @@ const currentDocument = ref<any>({});
 const fetchKnowledge = async () => {
   loading.value = true;
   try {
-    const response = await fetch('http://localhost:8080/api/ai/knowledge/1', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get('/ai/knowledge/1');
     if (result.success) {
       documents.value = result.data;
     } else {
@@ -158,10 +155,7 @@ const searchKnowledge = async () => {
 
   loading.value = true;
   try {
-    const response = await fetch(`http://localhost:8080/api/ai/knowledge/search/1?keyword=${encodeURIComponent(searchForm.value.keyword)}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get(`/ai/knowledge/search/1?keyword=${encodeURIComponent(searchForm.value.keyword)}`);
     if (result.success) {
       documents.value = result.data;
       ElMessage.success('搜索完成');
@@ -181,22 +175,13 @@ const addKnowledge = async () => {
 
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const response = await fetch('http://localhost:8080/api/ai/knowledge/add', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        projectId: 1,
-        title: knowledgeForm.value.title,
-        content: knowledgeForm.value.content,
-        docType: knowledgeForm.value.docType,
-        createdBy: user.id
-      })
+    const result: any = await apiClient.post('/ai/knowledge/add', {
+      projectId: 1,
+      title: knowledgeForm.value.title,
+      content: knowledgeForm.value.content,
+      docType: knowledgeForm.value.docType,
+      createdBy: user.id
     });
-
-    const result = await response.json();
     if (result.success) {
       ElMessage.success('添加成功');
       showAddDialog.value = false;
@@ -223,13 +208,7 @@ const deleteDocument = async (id: number) => {
       type: 'warning'
     });
 
-    const response = await fetch(`http://localhost:8080/api/ai/knowledge/delete/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.delete(`/ai/knowledge/delete/${id}`);
     if (result.success) {
       ElMessage.success('删除成功');
       fetchKnowledge();

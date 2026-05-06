@@ -53,9 +53,9 @@
                 <el-tag size="small" :type="getPriorityType(task.priority)" effect="light">
                   {{ getPriorityName(task.priority) }}
                 </el-tag>
-                <div class="task-assignee" v-if="task.assignedTo">
-                  <el-avatar :size="20" class="assignee-avatar">{{ getAssigneeInitials(task.assignedTo) }}</el-avatar>
-                  <span class="assignee-name">{{ getAssigneeName(task.assignedTo) }}</span>
+                <div class="task-assignee" v-if="task.assigneeId">
+                  <el-avatar :size="20" class="assignee-avatar">{{ getAssigneeInitials(task.assigneeId) }}</el-avatar>
+                  <span class="assignee-name">{{ getAssigneeName(task.assigneeId) }}</span>
                 </div>
               </div>
             </div>
@@ -98,9 +98,9 @@
                 <el-tag size="small" :type="getPriorityType(task.priority)" effect="light">
                   {{ getPriorityName(task.priority) }}
                 </el-tag>
-                <div class="task-assignee" v-if="task.assignedTo">
-                  <el-avatar :size="20" class="assignee-avatar">{{ getAssigneeInitials(task.assignedTo) }}</el-avatar>
-                  <span class="assignee-name">{{ getAssigneeName(task.assignedTo) }}</span>
+                <div class="task-assignee" v-if="task.assigneeId">
+                  <el-avatar :size="20" class="assignee-avatar">{{ getAssigneeInitials(task.assigneeId) }}</el-avatar>
+                  <span class="assignee-name">{{ getAssigneeName(task.assigneeId) }}</span>
                 </div>
               </div>
             </div>
@@ -143,9 +143,9 @@
                 <el-tag size="small" :type="getPriorityType(task.priority)" effect="light">
                   {{ getPriorityName(task.priority) }}
                 </el-tag>
-                <div class="task-assignee" v-if="task.assignedTo">
-                  <el-avatar :size="20" class="assignee-avatar">{{ getAssigneeInitials(task.assignedTo) }}</el-avatar>
-                  <span class="assignee-name">{{ getAssigneeName(task.assignedTo) }}</span>
+                <div class="task-assignee" v-if="task.assigneeId">
+                  <el-avatar :size="20" class="assignee-avatar">{{ getAssigneeInitials(task.assigneeId) }}</el-avatar>
+                  <span class="assignee-name">{{ getAssigneeName(task.assigneeId) }}</span>
                 </div>
               </div>
             </div>
@@ -186,9 +186,9 @@
               </div>
               <div class="task-meta">
                 <el-tag size="small" type="success" effect="light">已完成</el-tag>
-                <div class="task-assignee" v-if="task.assignedTo">
-                  <el-avatar :size="20" class="assignee-avatar">{{ getAssigneeInitials(task.assignedTo) }}</el-avatar>
-                  <span class="assignee-name">{{ getAssigneeName(task.assignedTo) }}</span>
+                <div class="task-assignee" v-if="task.assigneeId">
+                  <el-avatar :size="20" class="assignee-avatar">{{ getAssigneeInitials(task.assigneeId) }}</el-avatar>
+                  <span class="assignee-name">{{ getAssigneeName(task.assigneeId) }}</span>
                 </div>
               </div>
             </div>
@@ -242,24 +242,26 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ArrowLeft, Plus } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
+import type { Task, User, TaskStatus } from '../types';
 
 const route = useRoute();
 const router = useRouter();
 const projectId = Number(route.params.id);
 
-const tasks = ref<any[]>([]);
-const users = ref<any[]>([]);
+const tasks = ref<Task[]>([]);
+const users = ref<User[]>([]);
 const showTaskDialog = ref(false);
 const statusComment = ref('');
-const draggedTask = ref<any>(null);
+const draggedTask = ref<Task | null>(null);
 const dragOverColumn = ref<string>('');
 const saving = ref(false);
 
-const taskForm = ref({
-  id: '',
+const taskForm = ref<Partial<Task> & { progress: number }>({
+  id: undefined,
   name: '',
   description: '',
-  status: '',
+  status: 'todo',
   progress: 0
 });
 
@@ -270,10 +272,7 @@ const doneTasks = computed(() => tasks.value.filter(t => t.status === 'done'));
 
 const fetchTasks = async () => {
   try {
-    const response = await fetch(`http://localhost:8080/api/task/project/${projectId}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get(`/task/project/${projectId}`);
     if (result.success) {
       tasks.value = result.data;
     }
@@ -284,10 +283,7 @@ const fetchTasks = async () => {
 
 const fetchUsers = async () => {
   try {
-    const response = await fetch('http://localhost:8080/api/user/list', {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get('/user/list');
     if (result.success) {
       users.value = result.data;
     }
@@ -296,12 +292,14 @@ const fetchUsers = async () => {
   }
 };
 
-const getAssigneeName = (userId: number) => {
+const getAssigneeName = (userId: number | undefined) => {
+  if (!userId) return '';
   const user = users.value.find(u => u.id === userId);
   return user && user.username ? user.username : '';
 };
 
-const getAssigneeInitials = (userId: number) => {
+const getAssigneeInitials = (userId: number | undefined) => {
+  if (!userId) return '?';
   const user = users.value.find(u => u.id === userId);
   if (user && user.username && typeof user.username === 'string' && user.username.length > 0) {
     return user.username.charAt(0).toUpperCase();
@@ -309,25 +307,25 @@ const getAssigneeInitials = (userId: number) => {
   return '?';
 };
 
-const getPriorityType = (priority: string) => {
+const getPriorityType = (priority: string | undefined) => {
   const typeMap: Record<string, string> = {
     high: 'danger',
     medium: 'warning',
     low: 'info'
   };
-  return typeMap[priority] || 'info';
+  return typeMap[priority || ''] || 'info';
 };
 
-const getPriorityName = (priority: string) => {
+const getPriorityName = (priority: string | undefined) => {
   const nameMap: Record<string, string> = {
     high: '高',
     medium: '中',
     low: '低'
   };
-  return nameMap[priority] || priority;
+  return nameMap[priority || ''] || priority || '';
 };
 
-const onDragStart = (task: any, event: DragEvent) => {
+const onDragStart = (task: Task, event: DragEvent) => {
   draggedTask.value = task;
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'move';
@@ -357,12 +355,13 @@ const onDrop = async (newStatus: string, event: DragEvent) => {
 
   const oldStatus = draggedTask.value.status;
   const taskId = draggedTask.value.id;
+  const targetStatus = newStatus as TaskStatus;
   
   // 优化：先本地更新，让界面立即响应
   const taskIndex = tasks.value.findIndex(t => t.id === taskId);
   if (taskIndex !== -1) {
-    tasks.value[taskIndex].status = newStatus;
-    tasks.value[taskIndex].progress = newStatus === 'done' ? 100 : tasks.value[taskIndex].progress;
+    tasks.value[taskIndex].status = targetStatus;
+    tasks.value[taskIndex].progress = targetStatus === 'done' ? 100 : (tasks.value[taskIndex].progress || 0);
     // 触发响应式更新
     tasks.value = [...tasks.value];
   }
@@ -370,47 +369,30 @@ const onDrop = async (newStatus: string, event: DragEvent) => {
   try {
     const updatedTask = {
       id: taskId,
-      status: newStatus,
-      progress: newStatus === 'done' ? 100 : draggedTask.value.progress
+      status: targetStatus,
+      progress: targetStatus === 'done' ? 100 : (draggedTask.value.progress || 0)
     };
 
-    const response = await fetch('http://localhost:8080/api/task/update', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify(updatedTask)
-    });
-
-    const result = await response.json();
+    const result: any = await apiClient.put('/task/update', updatedTask);
     if (result.success) {
-      const logResponse = await fetch('http://localhost:8080/api/task-status-log/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
+      try {
+        await apiClient.post('/task-status-log/create', {
           taskId: taskId,
           fromStatus: oldStatus,
-          toStatus: newStatus,
+          toStatus: targetStatus,
           changedBy: JSON.parse(localStorage.getItem('user') || '{}').id,
           comment: ''
-        })
-      });
-      ElMessage.success(`任务已移动到${getStatusName(newStatus)}`);
-      // 再从服务器重新获取确保一致性
+        });
+      } catch { /* ignore log failure */ }
+      ElMessage.success(`任务已移动到${getStatusName(targetStatus)}`);
       fetchTasks();
     } else {
       ElMessage.error(result.message || '更新失败');
-      // 失败时回滚
       fetchTasks();
     }
   } catch (error) {
     console.error('更新任务状态失败', error);
     ElMessage.error('更新任务状态失败');
-    // 失败时回滚
     fetchTasks();
   }
 
@@ -427,12 +409,12 @@ const getStatusName = (status: string) => {
   return nameMap[status] || status;
 };
 
-const editTask = (task: any) => {
-  taskForm.value = { ...task };
+const editTask = (task: Task) => {
+  taskForm.value = { ...task, progress: task.progress || 0 };
   showTaskDialog.value = true;
 };
 
-const onStatusChange = (newStatus: string) => {
+const onStatusChange = (newStatus: TaskStatus) => {
   if (newStatus === 'done') {
     taskForm.value.progress = 100;
   }
@@ -442,7 +424,7 @@ const saveTask = async () => {
   saving.value = true;
   try {
     const oldTask = tasks.value.find(t => t.id === taskForm.value.id);
-    const oldStatus = oldTask?.status || '';
+    const oldStatus = oldTask?.status || 'todo';
 
     // 先本地更新，让界面立即响应
     const taskIndex = tasks.value.findIndex(t => t.id === taskForm.value.id);
@@ -451,32 +433,18 @@ const saveTask = async () => {
       tasks.value = [...tasks.value];
     }
 
-    const response = await fetch('http://localhost:8080/api/task/update', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify(taskForm.value)
-    });
-
-    const result = await response.json();
+    const result: any = await apiClient.put('/task/update', taskForm.value);
     if (result.success) {
-      if (oldStatus !== taskForm.value.status) {
-        await fetch('http://localhost:8080/api/task-status-log/create', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({
+      if (oldStatus !== taskForm.value.status && taskForm.value.status) {
+        try {
+          await apiClient.post('/task-status-log/create', {
             taskId: taskForm.value.id,
             fromStatus: oldStatus,
             toStatus: taskForm.value.status,
             changedBy: JSON.parse(localStorage.getItem('user') || '{}').id,
             comment: statusComment.value
-          })
-        });
+          });
+        } catch { /* ignore log failure */ }
       }
       ElMessage.success('任务更新成功');
       showTaskDialog.value = false;
@@ -664,6 +632,7 @@ onMounted(() => {
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

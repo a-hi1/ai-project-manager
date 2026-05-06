@@ -3,8 +3,8 @@
     <el-container>
       <el-header>
         <div class="header-left">
-          <h1>项目管理系统</h1>
-          <el-tag v-if="currentRoleInfo" :type="getRoleTagType(user?.roleId)" size="small" class="role-tag">
+          <h1>软件项目管理系统</h1>
+          <el-tag v-if="currentRoleInfo && user?.roleId" :type="getRoleTagType(user!.roleId)" size="small" class="role-tag">
             {{ currentRoleInfo.name }}
           </el-tag>
         </div>
@@ -61,13 +61,14 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { Folder, Plus, Document, Edit, Calendar, List, Warning, Flag } from '@element-plus/icons-vue';
 import NotificationPanel from '../components/NotificationPanel.vue';
-import { getMenusByRole, getRoleName, getHomePath, ROLES, type MenuItem, type RoleType } from '../utils/rolePermission';
+import { getMenusByRole, getHomePath, ROLES, type RoleType } from '../utils/rolePermission';
+
+import type { User } from '../types';
 
 const router = useRouter();
 const route = useRoute();
-const user = ref<any>(null);
+const user = ref<User | null>(null);
 const userRole = ref<RoleType>('guest');
 const activeMenu = ref('/projects');
 const isCollapse = ref(false);
@@ -84,7 +85,7 @@ const visibleMenus = computed(() => {
 
 // 根据角色获取标签颜色
 const getRoleTagType = (roleId: number) => {
-  const typeMap: Record<number, any> = {
+  const typeMap: Record<number, string> = {
     1: 'danger',    // 管理员
     2: 'warning',   // 项目经理
     3: 'primary',   // 开发者
@@ -138,11 +139,15 @@ const logout = () => {
 const initUser = () => {
   const userStr = localStorage.getItem('user');
   if (userStr) {
-    user.value = JSON.parse(userStr);
+    const parsedUser = JSON.parse(userStr);
+    user.value = parsedUser;
     // 根据roleId获取角色代码
-    userRole.value = mapRoleIdToCode(user.value.roleId);
-    // 设置当前菜单高亮
-    activeMenu.value = route.path || getHomePath(userRole.value);
+    const roleId = parsedUser.roleId;
+    if (roleId) {
+      userRole.value = mapRoleIdToCode(roleId);
+      // 设置当前菜单高亮
+      activeMenu.value = route.path || getHomePath(userRole.value);
+    }
   }
 };
 

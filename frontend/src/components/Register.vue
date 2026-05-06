@@ -6,7 +6,7 @@
           <h2>注册</h2>
         </div>
       </template>
-      <el-form :model="registerForm" ref="registerFormRef" label-width="80px">
+      <el-form :model="registerForm" label-width="80px">
         <el-form-item label="用户名" prop="username">
           <el-input v-model="registerForm.username" placeholder="请输入用户名" />
         </el-form-item>
@@ -38,9 +38,9 @@
 import { ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { useRouter } from 'vue-router';
+import apiClient from '../utils/api';
 
 const router = useRouter();
-const registerFormRef = ref();
 const registerForm = ref({
   username: '',
   password: '',
@@ -58,18 +58,7 @@ const register = async () => {
   }
   
   try {
-    console.log('发送请求到后端...');
-    const response = await fetch('http://localhost:8080/api/user/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(registerForm.value)
-    });
-
-    console.log('响应状态:', response.status);
-    const result = await response.json();
-    console.log('响应数据:', result);
+    const result: any = await apiClient.post('/user/register', registerForm.value);
     
     if (result.success) {
       ElMessage.success('注册成功，请登录');

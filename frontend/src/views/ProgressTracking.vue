@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="progress-tracking">
     <el-card>
       <template #header>
@@ -276,6 +276,7 @@ import {
   ArrowLeft, Plus, Edit, Delete, Search, List, Timer, 
   Loading, CircleCheck, Warning 
 } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 
 const route = useRoute();
 const router = useRouter();
@@ -402,11 +403,7 @@ const openCreateDialog = () => {
 const fetchTasks = async () => {
   loading.value = true;
   try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:8080/api/task/project/${projectId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
+const `/task/project/${projectId}`: any = await apiClient.get(response);
     if (result.success) {
       tasks.value = result.data || [];
     } else {
@@ -421,11 +418,7 @@ const fetchTasks = async () => {
 
 const fetchUsers = async () => {
   try {
-    const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:8080/api/role/list', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get('/role/list');
     if (result.success) {
       users.value = result.data || [];
     }
@@ -447,18 +440,10 @@ const saveTask = async () => {
     }
     taskForm.value.projectId = projectId;
 
-    const url = isEdit.value ? 'http://localhost:8080/api/task/update' : 'http://localhost:8080/api/task/create';
+    const url = isEdit.value ? '/task/update' : '/task/create';
     const method = isEdit.value ? 'PUT' : 'POST';
 
-    const response = await fetch(url, {
-      method: method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify(taskForm.value)
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get(url);
     if (result.success) {
       ElMessage.success(isEdit.value ? '编辑任务成功' : '添加任务成功');
       showCreateDialog.value = false;
@@ -487,13 +472,7 @@ const deleteTask = async (id: number) => {
       cancelButtonText: '取消',
       type: 'warning'
     });
-
-    const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:8080/api/task/delete/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
+const `/task/delete/${id}`: any = await apiClient.delete(response);
     if (result.success) {
       ElMessage.success('删除任务成功');
       await fetchTasks();
@@ -524,15 +503,8 @@ const saveHours = async () => {
     if (task) {
       task.actualHours = (task.actualHours || 0) + hoursForm.value.hours;
       
-      const response = await fetch('http://localhost:8080/api/task/update', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(task)
+    const result: any = await apiClient.put('/task/update', task)
       });
-      const result = await response.json();
       if (result.success) {
         ElMessage.success('工时填报成功');
         showHoursDialog.value = false;

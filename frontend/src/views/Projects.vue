@@ -191,17 +191,18 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Folder, Plus, View, Edit, Delete, Search, Calendar, HomeFilled } from '@element-plus/icons-vue';
+import { Folder, Plus, View, Edit, Delete, Calendar, HomeFilled } from '@element-plus/icons-vue';
 import apiClient from '../utils/api';
 import { getRoleType } from '../utils/rolePermission';
+import type { Project } from '../types';
 
 const router = useRouter();
-const projects = ref<any[]>([]);
+const projects = ref<Project[]>([]);
 const loading = ref(false);
 const saving = ref(false);
 const editDialogVisible = ref(false);
-const editForm = ref<any>({});
-const dateRange = ref<any[]>([]);
+const editForm = ref<Project>({ name: '', description: '', status: 'pending', startDate: '', endDate: '' });
+const dateRange = ref<Date[] | string[]>([]);
 const searchKeyword = ref('');
 const filterStatus = ref('');
 const currentPage = ref(1);
@@ -296,7 +297,7 @@ const viewProject = (id: number) => {
   router.push(`/project/${id}`);
 };
 
-const editProject = (project: any) => {
+const editProject = (project: Project) => {
   editForm.value = { ...project };
   if (project.startDate && project.endDate) {
     dateRange.value = [new Date(project.startDate), new Date(project.endDate)];
@@ -306,7 +307,7 @@ const editProject = (project: any) => {
   editDialogVisible.value = true;
 };
 
-const updateEditDates = (val: any[]) => {
+const updateEditDates = (val: string[]) => {
   if (val && val.length === 2) {
     editForm.value.startDate = val[0] ? new Date(val[0]).toISOString().split('T')[0] : '';
     editForm.value.endDate = val[1] ? new Date(val[1]).toISOString().split('T')[0] : '';

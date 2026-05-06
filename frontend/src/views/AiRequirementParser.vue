@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="ai-requirement-parser">
     <el-card>
       <template #header>
@@ -160,6 +160,7 @@ import {
   Warning,
   Edit
 } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 
 const router = useRouter();
 const activeTab = ref('paste');
@@ -167,7 +168,7 @@ const isParsing = ref(false);
 const parseResult = ref('');
 const parsedData = ref<any>(null);
 const token = localStorage.getItem('token') || '';
-const uploadUrl = computed(() => `http://localhost:8080/api/ai/upload-document?projectId=1`);
+const uploadUrl = computed(() => `/ai/upload-document?projectId=1`);
 
 const uploadHeaders = computed(() => {
   return {
@@ -188,24 +189,14 @@ const parseContent = async () => {
   isParsing.value = true;
   try {
     console.log('开始解析需求内容...');
-    const response = await fetch('http://localhost:8080/api/ai/parse-document', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ content: contentForm.value.content })
-    });
-
-    console.log('响应状态:', response.status);
-    const result = await response.json();
-    console.log('解析结果:', result);
+    const apiResult: any = await apiClient.post('/ai/parse-document', { content: contentForm.value.content });
+    console.log('解析结果:', apiResult);
     
-    if (result.success) {
-      parseResult.value = result.data;
+    if (apiResult.success) {
+      parseResult.value = apiResult.data;
       try {
         // 尝试解析JSON结果 - 更健壮的解析逻辑
-        let jsonStr = result.data;
+        let jsonStr = apiResult.data;
         // 移除可能的markdown代码块标记
         jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
         
@@ -220,16 +211,16 @@ const parseContent = async () => {
         } else {
           throw new Error('未找到有效的JSON格式');
         }
-      } catch (e) {
-        console.log('JSON解析失败，显示原始结果:', e);
+      } catch {
+        console.log('JSON解析失败，显示原始结果');
         parsedData.value = null;
       }
       ElMessage.success('解析完成');
     } else {
-      ElMessage.error(result.message || '解析失败');
+      ElMessage.error(apiResult.message || '解析失败');
     }
-  } catch (error) {
-    console.error('解析过程出错:', error);
+  } catch {
+    console.error('解析过程出错');
     ElMessage.error('网络错误，请检查后端服务是否正常启动');
   } finally {
     isParsing.value = false;
@@ -257,8 +248,8 @@ const handleUploadSuccess = (response: any) => {
       } else {
         throw new Error('未找到有效的JSON格式');
       }
-    } catch (e) {
-      console.log('上传结果JSON解析失败:', e);
+    } catch {
+      console.log('上传结果JSON解析失败');
       parsedData.value = null;
     }
     ElMessage.success('上传并解析完成');
@@ -267,8 +258,8 @@ const handleUploadSuccess = (response: any) => {
   }
 };
 
-const handleUploadError = (error: any) => {
-  console.error('上传失败:', error);
+const handleUploadError = () => {
+  console.error('上传失败');
   ElMessage.error('上传失败，请检查后端服务或文件格式');
 };
 

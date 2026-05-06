@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="requirement-research">
     <el-card>
       <template #header>
@@ -144,7 +144,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { ArrowLeft, Plus, Edit, Delete, Search, Document, Clock } from '@element-plus/icons-vue';
+import { ArrowLeft, Plus, Edit, Delete, Document, Clock } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 
 const route = useRoute();
 const router = useRouter();
@@ -211,16 +212,12 @@ const openCreateDialog = () => {
 const fetchResearches = async () => {
   loading.value = true;
   try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:8080/api/requirement-research/project/${projectId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
-    console.log('需求调研列表响应:', result);
-    if (result.success) {
-      researches.value = result.data || [];
+    const apiResult: any = await apiClient.get(`/requirement-research/project/${projectId}`);
+    console.log('需求调研列表响应:', apiResult);
+    if (apiResult.success) {
+      researches.value = apiResult.data || [];
     } else {
-      ElMessage.error(result.message || '获取需求调研列表失败');
+      ElMessage.error(apiResult.message || '获取需求调研列表失败');
     }
   } catch (error) {
     console.error('获取需求调研列表错误:', error);
@@ -243,28 +240,21 @@ const saveResearch = async () => {
     }
     researchForm.value.projectId = projectId;
 
-    const url = isEdit.value ? 'http://localhost:8080/api/requirement-research/update' : 'http://localhost:8080/api/requirement-research/create';
-    const method = isEdit.value ? 'PUT' : 'POST';
+    let apiResult: any;
+    if (isEdit.value) {
+      apiResult = await apiClient.put('/requirement-research/update', researchForm.value);
+    } else {
+      apiResult = await apiClient.post('/requirement-research/create', researchForm.value);
+    }
     
-    console.log('提交数据:', researchForm.value);
-    
-    const response = await fetch(url, {
-      method: method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify(researchForm.value)
-    });
-    const result = await response.json();
-    console.log('保存响应:', result);
-    if (result.success) {
+    console.log('保存响应:', apiResult);
+    if (apiResult.success) {
       ElMessage.success(isEdit.value ? '编辑需求调研成功' : '添加需求调研成功');
       showCreateDialog.value = false;
       resetForm();
       await fetchResearches();
     } else {
-      ElMessage.error(result.message || (isEdit.value ? '编辑需求调研失败' : '添加需求调研失败'));
+      ElMessage.error(apiResult.message || (isEdit.value ? '编辑需求调研失败' : '添加需求调研失败'));
     }
   } catch (error) {
     console.error('保存错误:', error);
@@ -287,18 +277,12 @@ const deleteResearch = async (id: number) => {
       cancelButtonText: '取消',
       type: 'warning'
     });
-
-    const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:8080/api/requirement-research/delete/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
-    if (result.success) {
+    const apiResult: any = await apiClient.delete(`/requirement-research/delete/${id}`);
+    if (apiResult.success) {
       ElMessage.success('删除需求调研成功');
       await fetchResearches();
     } else {
-      ElMessage.error(result.message || '删除需求调研失败');
+      ElMessage.error(apiResult.message || '删除需求调研失败');
     }
   } catch (error) {
     if (error !== 'cancel') {

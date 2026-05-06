@@ -36,6 +36,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ArrowLeft } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 
 const route = useRoute();
 const router = useRouter();
@@ -45,10 +46,7 @@ const archives = ref<any[]>([]);
 
 const fetchArchives = async () => {
   try {
-    const response = await fetch(`http://localhost:8080/api/document-archive/project/${projectId}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get(`/document-archive/project/${projectId}`);
     if (result.success) {
       archives.value = result.data;
     }
@@ -60,16 +58,9 @@ const fetchArchives = async () => {
 const archiveAllDocuments = async () => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const response = await fetch(`http://localhost:8080/api/document-archive/archive-project/${projectId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({ userId: user.id })
+    const result: any = await apiClient.post(`/document-archive/archive-project/${projectId}`, {
+      userId: user.id
     });
-
-    const result = await response.json();
     if (result.success) {
       ElMessage.success('文档归档成功');
       fetchArchives();

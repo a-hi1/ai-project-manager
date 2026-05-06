@@ -21,7 +21,8 @@ class WebSocketService {
     }
 
     try {
-      const socket = new SockJS('http://localhost:8080/ws/notification', null, { timeout: 8000 });
+      const wsUrl = import.meta.env.VITE_WS_URL || '/ws/notification';
+      const socket = new SockJS(wsUrl, null, { timeout: 8000 });
 
       this.client = new Client({
         webSocketFactory: () => socket,

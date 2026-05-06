@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="risk-management">
     <el-card>
       <template #header>
@@ -300,6 +300,7 @@ import {
   ArrowLeft, Plus, Edit, Delete, Warning, CircleClose, 
   Monitor, CircleCheck, Search, Calendar 
 } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 
 const route = useRoute();
 const router = useRouter();
@@ -460,11 +461,7 @@ const openCreateDialog = () => {
 const fetchRisks = async () => {
   loading.value = true;
   try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:8080/api/risk/project/${projectId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get(`/risk/project/${projectId}`);
     console.log('风险列表响应:', result);
     if (result.success) {
       risks.value = result.data || [];
@@ -508,21 +505,13 @@ const saveRisk = async () => {
       riskForm.value.identifiedBy = JSON.parse(userStr).id;
     }
 
-    const url = isEditRisk.value ? 'http://localhost:8080/api/risk/update' : 'http://localhost:8080/api/risk/create';
+    const url = isEditRisk.value ? '/risk/update' : '/risk/create';
     const method = isEditRisk.value ? 'PUT' : 'POST';
 
     console.log('提交风险数据:', riskForm.value);
-
-    const token = localStorage.getItem('token');
-    const response = await fetch(url, {
-      method: method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(riskForm.value)
-    });
-    const result = await response.json();
+    const result: any = isEditRisk.value 
+      ? await apiClient.put(url, riskForm.value)
+      : await apiClient.post(url, riskForm.value);
     console.log('保存风险响应:', result);
     if (result.success) {
       ElMessage.success(isEditRisk.value ? '更新风险成功' : '添加风险成功');
@@ -553,13 +542,7 @@ const deleteRisk = async (id: number) => {
       cancelButtonText: '取消',
       type: 'warning'
     });
-
-    const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:8080/api/risk/delete/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.delete(`/risk/delete/${id}`);
     if (result.success) {
       ElMessage.success('删除风险成功');
       await fetchRisks();

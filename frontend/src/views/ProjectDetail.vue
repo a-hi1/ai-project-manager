@@ -158,17 +158,35 @@ import {
   List,
   Warning,
   Flag,
-  Plus,
   Folder
 } from '@element-plus/icons-vue';
 import apiClient from '../utils/api';
 
+// 定义项目类型
+interface Project {
+  id?: number;
+  name: string;
+  description: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+}
+
+// 定义功能模块类型
+interface Module {
+  name: string;
+  path: string;
+  description: string;
+  icon: any;
+  color: string;
+}
+
 const route = useRoute();
 const router = useRouter();
 const projectId = Number(route.params.id);
-const project = ref<any>({ name: '', description: '', status: '', startDate: '', endDate: '' });
+const project = ref<Project>({ name: '', description: '', status: '', startDate: '', endDate: '' });
 const editProject = ref(false);
-const projectForm = ref<any>({ name: '', description: '', status: '', startDate: '', endDate: '' });
+const projectForm = ref<Project>({ name: '', description: '', status: '', startDate: '', endDate: '' });
 const saving = ref(false);
 const loading = ref(false);
 const projectFormRef = ref();
@@ -178,7 +196,7 @@ const editRules = {
   status: [{ required: true, message: '请选择项目状态', trigger: 'change' }]
 };
 
-const modules = [
+const modules: Module[] = [
   {
     name: '需求调研',
     path: '/requirement',
@@ -265,7 +283,7 @@ const modules = [
   }
 ];
 
-const getStatusType = (status: string) => {
+const getStatusType = (status: string): string => {
   const typeMap: Record<string, string> = {
     pending: 'info',
     in_progress: 'warning',
@@ -274,7 +292,7 @@ const getStatusType = (status: string) => {
   return typeMap[status] || 'info';
 };
 
-const getStatusName = (status: string) => {
+const getStatusName = (status: string): string => {
   const nameMap: Record<string, string> = {
     pending: '待启动',
     in_progress: '进行中',
@@ -283,7 +301,7 @@ const getStatusName = (status: string) => {
   return nameMap[status] || status || '未设置';
 };
 
-const calculateDuration = () => {
+const calculateDuration = (): string => {
   if (!project.value.startDate || !project.value.endDate) return '未设置';
   const start = new Date(project.value.startDate);
   const end = new Date(project.value.endDate);
@@ -291,7 +309,7 @@ const calculateDuration = () => {
   return diff > 0 ? `${diff} 天` : '无效日期';
 };
 
-const goToModule = (module: any) => {
+const goToModule = (module: Module): void => {
   router.push(`/project/${projectId}${module.path}`);
 };
 
@@ -383,6 +401,12 @@ const updateProject = async () => {
 
 onMounted(() => {
   fetchProject();
+});
+
+// 明确导出方法供外部调用
+defineExpose({
+  fetchProject,
+  updateProject
 });
 </script>
 

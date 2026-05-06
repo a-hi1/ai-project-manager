@@ -93,6 +93,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ArrowLeft } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 
 const route = useRoute();
 const router = useRouter();
@@ -110,10 +111,7 @@ const retrospectiveForm = ref({
 
 const fetchRetrospective = async () => {
   try {
-    const response = await fetch(`http://localhost:8080/api/project-retrospective/project/${projectId}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get(`/project-retrospective/project/${projectId}`);
     if (result.success && result.data.length > 0) {
       retrospective.value = result.data[0];
       retrospectiveForm.value = {
@@ -132,16 +130,9 @@ const fetchRetrospective = async () => {
 const generateRetrospective = async () => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const response = await fetch(`http://localhost:8080/api/project-retrospective/generate/${projectId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({ userId: user.id })
+    const result: any = await apiClient.post(`/project-retrospective/generate/${projectId}`, {
+      userId: user.id
     });
-
-    const result = await response.json();
     if (result.success) {
       ElMessage.success('复盘报告生成成功');
       fetchRetrospective();
@@ -155,19 +146,10 @@ const generateRetrospective = async () => {
 
 const saveRetrospective = async () => {
   try {
-    const response = await fetch('http://localhost:8080/api/project-retrospective/update', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({
-        ...retrospective.value,
-        ...retrospectiveForm.value
-      })
+    const result: any = await apiClient.put('/project-retrospective/update', {
+      ...retrospective.value,
+      ...retrospectiveForm.value
     });
-
-    const result = await response.json();
     if (result.success) {
       ElMessage.success('保存成功');
       fetchRetrospective();
@@ -177,7 +159,7 @@ const saveRetrospective = async () => {
   } catch (error) {
     ElMessage.error('网络错误');
   }
-}
+};
 
 const goBack = () => {
   router.back();

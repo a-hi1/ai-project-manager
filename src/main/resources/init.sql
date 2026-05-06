@@ -3,6 +3,9 @@
 -- 注意：此脚本可以安全重复运行，不会破坏现有数据
 -- =============================================
 
+-- 启用pgvector扩展
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- 创建角色表
 CREATE TABLE IF NOT EXISTS role (
     id SERIAL PRIMARY KEY,

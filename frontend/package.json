@@ -1,7 +1,8 @@
 {
-  "name": "frontend",
+  "name": "software-project-management-system",
+  "description": "软件项目管理系统 - AI驱动的专业项目管理平台",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

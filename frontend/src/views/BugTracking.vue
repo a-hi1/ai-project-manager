@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="bug-tracking">
     <el-card>
       <template #header>
@@ -119,6 +119,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ArrowLeft } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 
 const route = useRoute();
 const router = useRouter();
@@ -147,10 +148,7 @@ const assignForm = ref({
 
 const fetchBugs = async () => {
   try {
-    const response = await fetch(`http://localhost:8080/api/bug/project/${projectId}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get(`/bug/project/${projectId}`);
     if (result.success) {
       bugs.value = result.data;
     }
@@ -161,10 +159,7 @@ const fetchBugs = async () => {
 
 const fetchProjectMembers = async () => {
   try {
-    const response = await fetch(`http://localhost:8080/api/project/member/list/${projectId}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    const result = await response.json();
+    const result: any = await apiClient.get(`/project/member/list/${projectId}`);
     if (result.success) {
       projectMembers.value = result.data;
     }
@@ -176,24 +171,15 @@ const fetchProjectMembers = async () => {
 const submitBug = async () => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const response = await fetch('http://localhost:8080/api/bug/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({
-        projectId,
-        title: bugForm.value.title,
-        description: bugForm.value.description,
-        severity: bugForm.value.severity,
-        priority: bugForm.value.priority,
-        reporterId: user.id,
-        status: 'open'
-      })
+    const result: any = await apiClient.post('/bug/create', {
+      projectId,
+      title: bugForm.value.title,
+      description: bugForm.value.description,
+      severity: bugForm.value.severity,
+      priority: bugForm.value.priority,
+      reporterId: user.id,
+      status: 'open'
     });
-
-    const result = await response.json();
     if (result.success) {
       ElMessage.success('Bug提交成功');
       showBugDialog.value = false;
@@ -223,16 +209,9 @@ const assignBug = (bug: any) => {
 
 const confirmAssign = async () => {
   try {
-    const response = await fetch(`http://localhost:8080/api/bug/assign/${assignForm.value.bugId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({ assigneeId: assignForm.value.assigneeId })
+    const result: any = await apiClient.put(`/bug/assign/${assignForm.value.bugId}`, {
+      assigneeId: assignForm.value.assigneeId
     });
-
-    const result = await response.json();
     if (result.success) {
       ElMessage.success('Bug分配成功');
       showAssignDialog.value = false;
@@ -247,14 +226,7 @@ const confirmAssign = async () => {
 
 const resolveBug = async (bug: any) => {
   try {
-    const response = await fetch(`http://localhost:8080/api/bug/resolve/${bug.id}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    });
-
-    const result = await response.json();
+    const result: any = await apiClient.put(`/bug/resolve/${bug.id}`);
     if (result.success) {
       ElMessage.success('Bug已修复');
       fetchBugs();

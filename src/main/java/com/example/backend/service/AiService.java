@@ -25,13 +25,15 @@ public class AiService {
     private final ChangeRequestService changeRequestService;
     private final DeliverableService deliverableService;
     private final ProjectRetrospectiveService retrospectiveService;
+    private final KnowledgeDocumentService knowledgeDocumentService;
 
     @Autowired
     public AiService(ChatLanguageModel chatModel, TaskMapper taskMapper, 
                    ProjectMapper projectMapper, TaskService taskService,
                    RiskService riskService, BugService bugService,
                    WorkLogService workLogService, ChangeRequestService changeRequestService,
-                   DeliverableService deliverableService, ProjectRetrospectiveService retrospectiveService) {
+                   DeliverableService deliverableService, ProjectRetrospectiveService retrospectiveService,
+                   KnowledgeDocumentService knowledgeDocumentService) {
         this.chatModel = chatModel;
         this.taskMapper = taskMapper;
         this.projectMapper = projectMapper;
@@ -42,6 +44,7 @@ public class AiService {
         this.changeRequestService = changeRequestService;
         this.deliverableService = deliverableService;
         this.retrospectiveService = retrospectiveService;
+        this.knowledgeDocumentService = knowledgeDocumentService;
     }
 
     public String chat(String message) {
@@ -396,12 +399,26 @@ public class AiService {
                             "你能够提供项目分析、任务建议、风险评估、进度跟踪等方面的帮助。" +
                             "回答应该专业、实用、具体。";
         
+        StringBuilder fullContext = new StringBuilder(systemPrompt + "\n\n");
+        
         if (projectId != null) {
             String projectContext = getProjectContext(projectId);
-            return chatModel.generate(systemPrompt + "\n\n" + projectContext + "\n\n用户问题: " + message);
-        } else {
-            return chatModel.generate(systemPrompt + "\n\n用户问题: " + message);
+            fullContext.append(projectContext).append("\n\n");
         }
+        
+        List<KnowledgeDocument> relevantDocs = knowledgeDocumentService.searchBySemantic(projectId, message, 3);
+        if (!relevantDocs.isEmpty()) {
+            fullContext.append("【知识库相关内容】\n");
+            for (int i = 0; i < relevantDocs.size(); i++) {
+                KnowledgeDocument doc = relevantDocs.get(i);
+                fullContext.append("相关文档 ").append(i + 1).append(": ").append(doc.getTitle()).append("\n");
+                fullContext.append(doc.getContent()).append("\n\n");
+            }
+        }
+        
+        fullContext.append("用户问题: ").append(message);
+        
+        return chatModel.generate(fullContext.toString());
     }
 
     public String analyzeProjectHealth(Integer projectId) {

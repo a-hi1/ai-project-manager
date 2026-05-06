@@ -60,9 +60,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import { Bell, Message, Warning, Document, Flag } from '@element-plus/icons-vue';
 import { ElMessage, ElNotification } from 'element-plus';
-import webSocketService from '../utils/websocket';
+import { Bell, Warning, Message, Flag, Document } from '@element-plus/icons-vue';
+import websocketService from '../utils/websocket';
 import apiClient from '../utils/api';
 
 const showNotificationPanel = ref(false);
@@ -71,20 +71,6 @@ const unreadCount = ref(0);
 const loading = ref(false);
 const userStr = localStorage.getItem('user');
 const userId = userStr ? JSON.parse(userStr).id : 1;
-
-const safeFetch = async (url: string, options?: RequestInit) => {
-  const fullUrl = `http://localhost:8080${url}`;
-  const token = localStorage.getItem('token');
-  const headers: any = options?.headers || {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  const response = await fetch(fullUrl, { ...options, headers });
-  if (!response.ok) return { success: false, message: `HTTP ${response.status}` };
-  const contentType = response.headers.get('content-type') || '';
-  if (!contentType.includes('application/json')) return { success: false, message: '非JSON响应' };
-  return response.json();
-};
 
 const getNotificationIcon = (type: string) => {
   const iconMap: Record<string, any> = {
@@ -128,59 +114,37 @@ const formatTime = (timeStr: string) => {
   return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
 
-const loadNotifications = async () => {
+const fetchNotifications = async () => {
   loading.value = true;
-  try {
-    const data = await safeFetch(`/api/notification/list?userId=${userId}`);
-    if (data.success) {
-      notifications.value = data.data || [];
-    }
-  } catch (error) {
-    console.error('加载通知失败:', error);
-  } finally {
-    loading.value = false;
+  const data: any = await apiClient.get(`/notification/list?userId=${userId}`);
+  if (data.success) {
+    notifications.value = data.data || [];
   }
+  loading.value = false;
 };
 
 const loadUnreadCount = async () => {
-  try {
-    const data = await safeFetch(`/api/notification/unread-count?userId=${userId}`);
-    if (data.success) {
-      unreadCount.value = data.data || 0;
-    }
-  } catch (error) {
-    console.error('加载未读数量失败:', error);
+  const data: any = await apiClient.get(`/notification/unread-count?userId=${userId}`);
+  if (data.success) {
+    unreadCount.value = data.data || 0;
   }
 };
 
 const markAsRead = async (notificationId: number) => {
-  try {
-    const data = await safeFetch(`/api/notification/mark-read?notificationId=${notificationId}&userId=${userId}`, {
-      method: 'POST'
-    });
-    if (data.success) {
-      const notification = notifications.value.find(n => n.id === notificationId);
-      if (notification) {
-        notification.readStatus = true;
-      }
+  const data: any = await apiClient.post(`/notification/mark-read?notificationId=${notificationId}&userId=${userId}`);
+  if (data.success) {
+    const notification = notifications.value.find(n => n.id === notificationId);
+    if (notification) {
+      notification.readStatus = true;
     }
-  } catch (error) {
-    console.error('标记已读失败:', error);
   }
 };
 
 const markAllAsRead = async () => {
-  try {
-    const data = await safeFetch(`/api/notification/mark-all-read?userId=${userId}`, {
-      method: 'POST'
-    });
-    if (data.success) {
-      notifications.value.forEach(n => n.readStatus = true);
-      ElMessage.success('已全部标记为已读');
-    }
-  } catch (error) {
-    console.error('标记全部已读失败:', error);
-    ElMessage.error('操作失败');
+  const data: any = await apiClient.post(`/notification/mark-all-read?userId=${userId}`);
+  if (data.success) {
+    notifications.value.forEach(n => n.readStatus = true);
+    ElMessage.success('已全部标记为已读');
   }
 };
 
@@ -199,13 +163,13 @@ const handleUnreadCountUpdate = (count: number) => {
 };
 
 onMounted(() => {
-  loadNotifications();
+  fetchNotifications();
   loadUnreadCount();
-  webSocketService.connect(userId, handleNewNotification, handleUnreadCountUpdate);
+  websocketService.connect(userId, handleNewNotification, handleUnreadCountUpdate);
 });
 
 onUnmounted(() => {
-  webSocketService.disconnect();
+  websocketService.disconnect();
 });
 </script>
 

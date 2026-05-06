@@ -6,8 +6,8 @@
           <div class="logo">
             <el-icon :size="48" color="#409EFF"><Management /></el-icon>
           </div>
-          <h1 class="title">AI项目管理系统</h1>
-          <p class="subtitle">智能、高效、专业的项目管理平台</p>
+          <h1 class="title">软件项目管理系统</h1>
+          <p class="subtitle">AI驱动 · 专业高效的软件项目管理平台</p>
         </div>
 
         <el-form
@@ -59,7 +59,7 @@
       </div>
 
       <div class="login-footer">
-        <p>AI驱动 · 让项目管理更智能</p>
+        <p>软件项目管理系统 · 专业高效的项目管理平台</p>
       </div>
     </div>
   </div>
@@ -68,8 +68,10 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage, FormInstance, FormRules } from 'element-plus';
+import { ElMessage } from 'element-plus';
+import type { FormInstance, FormRules } from 'element-plus';
 import { User, Lock, Management } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 
 const router = useRouter();
 const loginFormRef = ref<FormInstance>();
@@ -111,13 +113,7 @@ const handleLogin = async () => {
 
     loading.value = true;
     try {
-      const response = await fetch('http://localhost:8080/api/user/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loginForm)
-      });
-
-      const result = await response.json();
+      const result: any = await apiClient.post('/user/login', loginForm);
 
       if (result.success) {
         localStorage.setItem('token', result.token);

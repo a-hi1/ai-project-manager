@@ -236,11 +236,38 @@ public class AiController {
         }
     }
 
+    @DeleteMapping("/knowledge/delete/{id}")
+    public Map<String, Object> deleteKnowledgeWithPath(@PathVariable Integer id) {
+        return deleteKnowledge(id);
+    }
+
     @GetMapping("/knowledge/search/{projectId}")
     public Map<String, Object> searchKnowledge(@PathVariable Integer projectId, @RequestParam String keyword) {
         try {
             List<KnowledgeDocument> documents = knowledgeDocumentService.searchByKeyword(projectId, keyword);
             return Map.of("success", true, "data", documents);
+        } catch (Exception e) {
+            return Map.of("success", false, "message", e.getMessage());
+        }
+    }
+
+    @GetMapping("/knowledge/semantic-search")
+    public Map<String, Object> semanticSearchKnowledge(@RequestParam(required = false) Integer projectId, 
+                                                       @RequestParam String query,
+                                                       @RequestParam(defaultValue = "5") int limit) {
+        try {
+            List<KnowledgeDocument> documents = knowledgeDocumentService.searchBySemantic(projectId, query, limit);
+            return Map.of("success", true, "data", documents);
+        } catch (Exception e) {
+            return Map.of("success", false, "message", e.getMessage());
+        }
+    }
+
+    @PostMapping("/knowledge/vectorize-all")
+    public Map<String, Object> vectorizeAllDocuments() {
+        try {
+            knowledgeDocumentService.vectorizeAllDocuments();
+            return Map.of("success", true, "message", "所有文档向量化完成");
         } catch (Exception e) {
             return Map.of("success", false, "message", e.getMessage());
         }

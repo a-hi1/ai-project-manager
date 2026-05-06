@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="ai-task-splitter">
     <el-card>
       <template #header>
@@ -37,7 +37,7 @@
       <div v-if="splitResult" class="split-result">
         <el-divider content-position="left">拆分结果</el-divider>
         <div v-if="taskList.length > 0" class="task-list">
-          <el-table :data="taskList" style="width: 100%" :row-key="(row, index) => index">
+          <el-table :data="taskList" style="width: 100%" :row-key="(_row: any, index: number) => index">
             <el-table-column label="序号" width="60" type="index" />
             <el-table-column prop="name" label="任务名称" min-width="200" />
             <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
@@ -80,6 +80,7 @@ import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ArrowLeft, MagicStick, RefreshLeft, DocumentAdd, Download } from '@element-plus/icons-vue';
+import apiClient from '../utils/api';
 
 const route = useRoute();
 const router = useRouter();
@@ -88,7 +89,6 @@ const projectId = Number(route.params.id) || 1;
 const loading = ref(false);
 const splitResult = ref('');
 const taskList = ref<any[]>([]);
-const token = localStorage.getItem('token') || '';
 
 const requirementForm = ref({
   requirement: ''
@@ -102,21 +102,12 @@ const splitTask = async () => {
 
   loading.value = true;
   try {
-    const response = await fetch('http://localhost:8080/api/ai/split-task', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ requirement: requirementForm.value.requirement })
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      splitResult.value = result.data;
+    const apiResult: any = await apiClient.post('/ai/split-task', { requirement: requirementForm.value.requirement });
+    if (apiResult.success) {
+      splitResult.value = apiResult.data;
       try {
         // 更健壮的JSON解析逻辑
-        let jsonStr = result.data;
+        let jsonStr = apiResult.data;
         // 移除可能的markdown代码块标记
         jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
         
@@ -132,15 +123,15 @@ const splitTask = async () => {
         } else {
           throw new Error('未找到有效的JSON格式');
         }
-      } catch (e) {
-        console.log('JSON解析失败:', e);
+      } catch {
+        console.log('JSON解析失败');
         taskList.value = [];
       }
       ElMessage.success('拆分完成');
     } else {
-      ElMessage.error(result.message || '拆分失败');
+      ElMessage.error(apiResult.message || '拆分失败');
     }
-  } catch (error) {
+  } catch {
     ElMessage.error('网络错误，请检查后端服务是否正常启动');
   } finally {
     loading.value = false;
@@ -156,23 +147,16 @@ const createTasks = async () => {
   try {
     let successCount = 0;
     for (const task of taskList.value) {
-      const response = await fetch('http://localhost:8080/api/task/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          projectId: projectId,
-          name: task.任务名称 || task.name,
-          description: task.描述 || task.description || '',
-          duration: task.工期 || task.duration || 1,
-          createdBy: JSON.parse(localStorage.getItem('user') || '{}').id || 1,
-          status: 'todo'
-        })
+      const result: any = await apiClient.post('/task/create', {
+        projectId: projectId,
+        name: task.任务名称 || task.name,
+        description: task.描述 || task.description || '',
+        duration: task.工期 || task.duration || 1,
+        createdBy: JSON.parse(localStorage.getItem('user') || '{}').id || 1,
+        status: 'todo'
       });
 
-      if (response.ok) {
+      if (result.success) {
         successCount++;
       }
     }
