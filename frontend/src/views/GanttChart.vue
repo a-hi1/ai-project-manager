@@ -299,7 +299,7 @@ const buildTaskTree = (tasks: Task[]) => {
   const roots: GanttTask[] = [];
   tasks.forEach(t => {
     const taskId = t.id ?? Date.now() + Math.random();
-    map.set(taskId, { ...t, id: taskId, children: [], hasChildren: false, level: 0, isMilestone: !!t.milestoneId, progress: 0 } as GanttTask);
+    map.set(taskId, { ...t, id: taskId, children: [], hasChildren: false, level: 0, isMilestone: !!t.milestoneId, progress: t.progress ?? 0 } as GanttTask);
   });
   tasks.forEach(t => {
     const taskId = t.id ?? 0;
@@ -757,6 +757,7 @@ const saveTask = async () => {
         updateTask.duration = taskForm.value.duration;
         updateTask.priority = taskForm.value.priority as any;
         updateTask.status = taskForm.value.status;
+        (updateTask as any).progress = taskForm.value.progress;
         rawTasks.value[taskIndex] = updateTask;
         rawTasks.value = [...rawTasks.value];
         nextTick(() => renderChart());
