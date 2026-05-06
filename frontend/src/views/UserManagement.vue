@@ -1,4 +1,4 @@
-﻿<template>
+﻿﻿<template>
   <div class="user-management">
     <el-card>
       <template #header>
@@ -185,7 +185,7 @@ const openEditDialog = (row: any) => {
 // 保存用户
 const saveUser = async () => {
   try {
-const userData = {
+    const userData = {
       ...currentUser.value,
       status: currentUserStatus.value ? 1 : 0
     };
@@ -194,8 +194,7 @@ const userData = {
       ? '/user/update' 
       : '/user/register';
       
-    const result: any = await apiClient.post(url, userData)
-    });
+    const result: any = await apiClient.post(url, userData);
     if (result.success) {
       ElMessage.success(userData.id ? '更新成功' : '创建成功');
       showAddDialog.value = false;
@@ -217,7 +216,7 @@ const deleteUser = async (row: any) => {
       cancelButtonText: '取消',
       type: 'warning'
     });
-const `/user/delete?id=${row.id}`: any = await apiClient.delete(response);
+    const result: any = await apiClient.delete(`/user/delete?id=${row.id}`);
     if (result.success) {
       ElMessage.success('删除成功');
       fetchUsers();
