@@ -185,8 +185,7 @@
       <el-upload
         class="upload-demo"
         drag
-        :action="uploadUrl"
-        :headers="uploadHeaders"
+        :http-request="customUpload"
         :on-success="handleUploadSuccess"
         :on-error="handleUploadError"
         :before-upload="beforeUpload"
@@ -326,7 +325,26 @@ const generateDailyReport = () => callAIFunction('daily-report', '生成日报')
 const suggestTasks = () => callAIFunction('suggest-tasks', '任务建议');
 const summarizeProject = () => callAIFunction('summarize', '项目总结');
 
-const uploadUrl = '/ai/upload-document';
+const customUpload = async (options: any) => {
+  const { file } = options;
+  const formData = new FormData();
+  formData.append('file', file);
+  if (selectedProjectId.value) {
+    formData.append('projectId', selectedProjectId.value.toString());
+  }
+  
+  try {
+    const result: any = await apiClient.post('/ai/upload-document', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    options.onSuccess(result);
+  } catch (error) {
+    options.onError(error);
+  }
+};
+
 const uploadHeaders = computed(() => ({
   Authorization: `Bearer ${token}`
 }));

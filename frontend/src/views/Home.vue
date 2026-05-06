@@ -34,7 +34,7 @@
                   v-for="child in menu.children"
                   :key="child.index"
                   :index="child.index"
-                  @click="handleSubMenuClick(child.index, $event)"
+                  @click="handleSubMenuClick(child.index)"
                 >
                   <el-icon><component :is="child.icon" /></el-icon>
                   <span>{{ child.title }}</span>
@@ -107,8 +107,7 @@ const handleMenuSelect = (key: string) => {
 };
 
 // 处理子菜单点击（需要替换项目ID）
-const handleSubMenuClick = (index: string, event: Event) => {
-  event.stopPropagation();
+const handleSubMenuClick = (index: string) => {
   // 如果路由有 :id 占位符，需要找到当前项目ID
   if (index.includes(':id')) {
     // 尝试从当前路由获取项目ID

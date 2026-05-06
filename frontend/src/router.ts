@@ -163,14 +163,14 @@ const router = createRouter({
 });
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, from) => {
   const token = localStorage.getItem('token');
   const userStr = localStorage.getItem('user');
   
   // 检查是否需要登录
   if (to.meta.requiresAuth && !token) {
     ElMessage.warning('请先登录');
-    return next('/login');
+    return '/login';
   }
   
   // 如果已登录，访问登录/注册页，跳转到首页
@@ -180,7 +180,7 @@ router.beforeEach((to, from, next) => {
       const user = JSON.parse(userStr);
       userRole = mapRoleIdToCode(user.roleId);
     }
-    return next(getHomePath(userRole));
+    return getHomePath(userRole);
   }
   
   // 权限检查
@@ -194,14 +194,12 @@ router.beforeEach((to, from, next) => {
       ElMessage.error('您没有权限访问该页面');
       // 如果是根路径，按角色跳转到对应首页
       if (to.path === '/') {
-        return next(getHomePath(userRole));
+        return getHomePath(userRole);
       }
       // 否则跳回首页
-      return next(from.path !== '/' ? from.path : getHomePath(userRole));
+      return from.path !== '/' ? from.path : getHomePath(userRole);
     }
   }
-  
-  next();
 });
 
 export default router;
