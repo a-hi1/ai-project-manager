@@ -35,6 +35,9 @@ public class UserService extends ServiceImpl<UserMapper, User> {
         if (user.getRoleId() == null) {
             user.setRoleId(5);
         }
+        if (user.getStatus() == null) {
+            user.setStatus(1);
+        }
         baseMapper.insert(user);
         logger.info("UserService.register: success, userId={}", user.getId());
         return user;

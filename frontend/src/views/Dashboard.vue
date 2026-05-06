@@ -204,28 +204,36 @@ const fetchDashboardData = async () => {
     let totalRisks = 0;
     let totalBugs = 0;
 
-    for (const project of projects.value) {
+    // 并行请求所有项目的数据
+    const projectPromises = projects.value.map(async (project) => {
       try {
-        const tasksResult: any = await apiClient.get(`/task/project/${project.id}`);
-        if (tasksResult.success) {
-          totalTasks += tasksResult.data.length;
-        }
-      } catch { /* ignore */ }
+        // 并行请求该项目的任务、风险、缺陷数据
+        const [tasksResult, risksResult, bugsResult] = await Promise.all([
+          apiClient.get(`/task/project/${project.id}`),
+          apiClient.get(`/risk/project/${project.id}`),
+          apiClient.get(`/bug/project/${project.id}`)
+        ]);
 
-      try {
-        const risksResult: any = await apiClient.get(`/risk/project/${project.id}`);
-        if (risksResult.success) {
-          totalRisks += risksResult.data.length;
-        }
-      } catch { /* ignore */ }
+        return {
+          tasks: tasksResult.success ? tasksResult.data.length : 0,
+          risks: risksResult.success ? risksResult.data.length : 0,
+          bugs: bugsResult.success ? bugsResult.data.length : 0
+        };
+      } catch {
+        // 如果某个项目的请求失败，返回0值，不影响其他项目
+        return { tasks: 0, risks: 0, bugs: 0 };
+      }
+    });
 
-      try {
-        const bugsResult: any = await apiClient.get(`/bug/project/${project.id}`);
-        if (bugsResult.success) {
-          totalBugs += bugsResult.data.length;
-        }
-      } catch { /* ignore */ }
-    }
+    // 等待所有项目的数据请求完成
+    const results = await Promise.all(projectPromises);
+
+    // 汇总统计数据
+    results.forEach(result => {
+      totalTasks += result.tasks;
+      totalRisks += result.risks;
+      totalBugs += result.bugs;
+    });
 
     stats.value.totalTasks = totalTasks;
     stats.value.totalRisks = totalRisks;
@@ -319,7 +327,8 @@ const updateCharts = () => {
 const checkRiskAlerts = async () => {
   riskAlerts.value = [];
 
-  for (const project of projects.value) {
+  // 并行请求所有项目的任务数据
+  const projectPromises = projects.value.map(async (project) => {
     try {
       const tasksResult: any = await apiClient.get(`/task/project/${project.id}`);
       if (tasksResult.success) {
@@ -328,16 +337,23 @@ const checkRiskAlerts = async () => {
           return new Date(t.endDate) < new Date();
         });
 
-        for (const task of overdueTasks) {
-          riskAlerts.value.push({
-            title: `项目"${project.name}"存在延期任务`,
-            description: `任务"${task.name}"已过期，但状态为"${getStatusName(task.status)}"`,
-            type: 'warning'
-          });
-        }
+        return overdueTasks.map(task => ({
+          title: `项目"${project.name}"存在延期任务`,
+          description: `任务"${task.name}"已过期，但状态为"${getStatusName(task.status)}"`,
+          type: 'warning'
+        }));
       }
-    } catch { /* ignore */ }
-  }
+      return [];
+    } catch {
+      return [];
+    }
+  });
+
+  // 等待所有项目的数据请求完成
+  const results = await Promise.all(projectPromises);
+
+  // 汇总所有风险预警
+  riskAlerts.value = results.flat();
 
   if (riskAlerts.value.length === 0) {
     ElMessage.success('暂无风险预警');

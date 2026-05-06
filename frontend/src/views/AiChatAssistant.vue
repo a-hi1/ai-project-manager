@@ -1,4 +1,4 @@
-﻿<template>
+﻿﻿﻿﻿﻿<template>
   <div class="ai-chat-assistant">
     <div class="chat-layout">
       <!-- 侧边栏 -->
@@ -389,34 +389,42 @@ const loadConversations = async () => {
     if (result.success) {
       // 保持当前会话ID和消息状态
       const currentId = activeConversationId.value;
-      const currentMessages = messages.value;
+      const currentMessages = [...messages.value];
+      const currentConversations = [...conversations.value];
       
       const groupedConversations = groupConversations(result.data);
       
       // 只保留有消息的会话
-      const validConversations = groupedConversations.filter(conv => 
+      let validConversations = groupedConversations.filter(conv => 
         conv.messages && conv.messages.length > 0
       );
       
-      conversations.value = validConversations;
-      
-      // 如果当前有活跃会话且有消息，尝试在列表中找到并更新
+      // 如果当前有活跃会话，优先保留它
       if (currentId && currentMessages.length > 0) {
-        const existingConv = validConversations.find(c => c.id === currentId);
-        if (existingConv) {
-          // 更新列表中已有的话，保持显示当前消息
-          existingConv.messages = [...currentMessages];
+        // 检查当前会话是否在新加载的列表中
+        const existingConvIndex = validConversations.findIndex(c => c.id === currentId);
+        
+        if (existingConvIndex >= 0) {
+          // 更新该会话的消息
+          validConversations[existingConvIndex].messages = [...currentMessages];
         } else {
-          // 列表中没有的话，把当前会话添加到列表
+          // 不在列表中，添加进去
+          const firstUserMsg = currentMessages.find(m => m.role === 'user');
           const newConv = {
             id: currentId,
-            title: currentMessages[0]?.message.substring(0, 30) + '...',
+            title: firstUserMsg 
+              ? (firstUserMsg.message.length > 30 
+                  ? firstUserMsg.message.substring(0, 30) + '...' 
+                  : firstUserMsg.message)
+              : '新会话',
             messages: [...currentMessages],
             updatedAt: new Date().toISOString()
           };
-          conversations.value.unshift(newConv);
+          validConversations.unshift(newConv);
         }
       }
+      
+      conversations.value = validConversations;
       
       // 只有列表有内容且当前没有会话时才选第一个
       if (validConversations.length > 0 && !currentId) {
@@ -467,8 +475,19 @@ const selectConversation = (conv: any) => {
 };
 
 const createNewConversation = () => {
-  activeConversationId.value = 'conv_' + Date.now().toString() + '_' + Math.random().toString(36).slice(2, 7);
+  const newId = 'conv_' + Date.now().toString() + '_' + Math.random().toString(36).slice(2, 7);
+  activeConversationId.value = newId;
   messages.value = [];
+  
+  // 立即将新会话添加到列表开头
+  const newConversation = {
+    id: newId,
+    title: '新会话',
+    messages: [],
+    updatedAt: new Date().toISOString()
+  };
+  conversations.value.unshift(newConversation);
+  
   ElMessage.success('新会话已创建');
 };
 
@@ -545,7 +564,21 @@ const sendMessage = async () => {
             createNewConversation();
           }
           
-          loadConversationHistory();
+          // 更新当前会话的标题和消息
+          if (activeConversationId.value && messages.value.length > 0) {
+            const currentConv = conversations.value.find(c => c.id === activeConversationId.value);
+            if (currentConv) {
+              // 用第一条用户消息作为标题
+              const firstUserMsg = messages.value.find(m => m.role === 'user');
+              if (firstUserMsg) {
+                currentConv.title = firstUserMsg.message.length > 30 
+                  ? firstUserMsg.message.substring(0, 30) + '...' 
+                  : firstUserMsg.message;
+              }
+              currentConv.messages = [...messages.value];
+              currentConv.updatedAt = new Date().toISOString();
+            }
+          }
         }
       };
       

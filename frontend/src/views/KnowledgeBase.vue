@@ -1,4 +1,4 @@
-﻿<template>
+﻿﻿﻿<template>
   <div class="knowledge-base">
     <el-card>
       <template #header>

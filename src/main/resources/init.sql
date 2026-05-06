@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS user_info (
     password VARCHAR(255) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
     role_id INTEGER NOT NULL,
+    status INTEGER DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (role_id) REFERENCES role(id)
@@ -337,13 +338,16 @@ CREATE TABLE IF NOT EXISTS project_retrospective (
     FOREIGN KEY (created_by) REFERENCES user_info(id)
 );
 
+-- 为现有user_info表添加status字段（如果不存在）
+ALTER TABLE user_info ADD COLUMN IF NOT EXISTS status INTEGER DEFAULT 1;
+
 -- 插入初始用户（如果不存在，密码都是123456）
-INSERT INTO user_info (username, password, email, role_id) VALUES
-('admin', '123456', 'admin@example.com', 1),
-('pm', '123456', 'pm@example.com', 2),
-('developer', '123456', 'developer@example.com', 3),
-('tester', '123456', 'tester@example.com', 4),
-('guest', '123456', 'guest@example.com', 5)
+INSERT INTO user_info (username, password, email, role_id, status) VALUES
+('admin', '123456', 'admin@example.com', 1, 1),
+('pm', '123456', 'pm@example.com', 2, 1),
+('developer', '123456', 'developer@example.com', 3, 1),
+('tester', '123456', 'tester@example.com', 4, 1),
+('guest', '123456', 'guest@example.com', 5, 1)
 ON CONFLICT (username) DO NOTHING;
 
 -- 确保 email 唯一约束也处理

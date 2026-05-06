@@ -16,6 +16,7 @@ public class User {
     private String email;
     @TableField("role_id")
     private Integer roleId;
+    private Integer status;
     @TableField("created_at")
     private LocalDateTime createdAt;
     @TableField("updated_at")
@@ -31,6 +32,8 @@ public class User {
     public void setEmail(String email) { this.email = email; }
     public Integer getRoleId() { return roleId; }
     public void setRoleId(Integer roleId) { this.roleId = roleId; }
+    public Integer getStatus() { return status; }
+    public void setStatus(Integer status) { this.status = status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

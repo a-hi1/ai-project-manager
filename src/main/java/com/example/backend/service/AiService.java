@@ -395,18 +395,30 @@ public class AiService {
     }
 
     public String chatWithContext(String message, Integer projectId) {
+        System.out.println("===== AiService.chatWithContext 开始 =====");
+        System.out.println("输入消息: " + message);
+        System.out.println("项目ID: " + projectId);
+        
         String systemPrompt = "你是一位专业的AI项目管理助手，专注于帮助项目经理更好地管理项目。" +
                             "你能够提供项目分析、任务建议、风险评估、进度跟踪等方面的帮助。" +
-                            "回答应该专业、实用、具体。";
+                            "回答应该专业、实用、具体。" +
+                            "【重要】回答格式要求：不要使用Markdown格式，不要使用###、##、#等标题符号，" +
+                            "不要使用**加粗**、*斜体*等格式，直接用自然的中文分段回答，" +
+                            "每段开头空两格，段落之间空一行。";
         
         StringBuilder fullContext = new StringBuilder(systemPrompt + "\n\n");
         
         if (projectId != null) {
+            System.out.println("获取项目上下文...");
             String projectContext = getProjectContext(projectId);
             fullContext.append(projectContext).append("\n\n");
+            System.out.println("项目上下文长度: " + projectContext.length());
         }
         
+        System.out.println("搜索知识库相关内容...");
         List<KnowledgeDocument> relevantDocs = knowledgeDocumentService.searchBySemantic(projectId, message, 3);
+        System.out.println("找到相关文档数量: " + relevantDocs.size());
+        
         if (!relevantDocs.isEmpty()) {
             fullContext.append("【知识库相关内容】\n");
             for (int i = 0; i < relevantDocs.size(); i++) {
@@ -418,7 +430,21 @@ public class AiService {
         
         fullContext.append("用户问题: ").append(message);
         
-        return chatModel.generate(fullContext.toString());
+        System.out.println("完整上下文长度: " + fullContext.length());
+        System.out.println("开始调用chatModel.generate...");
+        
+        try {
+            String result = chatModel.generate(fullContext.toString());
+            System.out.println("chatModel.generate调用成功，结果长度: " + result.length());
+            System.out.println("===== AiService.chatWithContext 结束 =====");
+            return result;
+        } catch (Exception e) {
+            System.out.println("===== chatModel.generate调用失败 =====");
+            System.out.println("错误类型: " + e.getClass().getName());
+            System.out.println("错误信息: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     public String analyzeProjectHealth(Integer projectId) {

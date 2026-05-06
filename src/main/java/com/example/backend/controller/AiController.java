@@ -47,11 +47,28 @@ public class AiController {
     @PostMapping("/upload-document")
     public Map<String, Object> uploadDocument(HttpServletRequest request, @RequestParam("file") MultipartFile file, @RequestParam(value = "projectId", required = false) Integer projectId) {
         try {
-            Integer userId = jwtUtils.getUserIdFromToken(request.getHeader("Authorization"));
+            String authHeader = request.getHeader("Authorization");
+            System.out.println("Auth Header: " + (authHeader != null ? authHeader.substring(0, Math.min(20, authHeader.length())) + "..." : "null"));
+            
+            Integer userId = jwtUtils.getUserIdFromToken(authHeader);
+            System.out.println("User ID from token: " + userId);
+            
+            if (userId == null) {
+                return Map.of("success", false, "message", "无法验证用户身份，请重新登录");
+            }
+            
             String fileName = file.getOriginalFilename();
-            String content = new String(file.getBytes());
+            String contentType = file.getContentType();
+            
+            System.out.println("Uploading file: " + fileName + ", size: " + file.getSize() + " bytes, type: " + contentType);
+            
+            // 使用文档解析器解析内容
+            String rawContent = DocumentParser.parseDocument(file);
+            String content = sanitizeContent(rawContent);
+            
+            System.out.println("Parsed content length: " + content.length() + " chars");
 
-            // 先保存文档，不立即向量化，避免失败
+            // 先保存文档
             KnowledgeDocument document = new KnowledgeDocument();
             document.setUserId(userId);
             document.setProjectId(projectId);
@@ -59,14 +76,36 @@ public class AiController {
             document.setTitle(fileName);
             document.setDocType("file");
             document.setContent(content);
+            document.setCreatedBy(userId);
             document.setCreatedAt(LocalDateTime.now());
             knowledgeDocumentService.save(document);
+            
+            System.out.println("Document saved with ID: " + document.getId());
 
-            return Map.of("success", true, "message", "文档上传成功", "documentId", document.getId(), "fileName", fileName);
+            // 调用AI解析需求文档
+            String parseResult = aiService.parseRequirementDocument(content);
+            System.out.println("AI parse result length: " + parseResult.length());
+
+            return Map.of("success", true, "message", "文档上传并解析成功", "documentId", document.getId(), "fileName", fileName, "data", parseResult);
         } catch (Exception e) {
+            System.out.println("===== 上传文件错误 =====");
             e.printStackTrace();
             return Map.of("success", false, "message", "文件上传失败: " + e.getMessage());
         }
+    }
+    
+    /**
+     * 清理内容，移除NUL字符和其他无效字符
+     */
+    private String sanitizeContent(String content) {
+        if (content == null) {
+            return "";
+        }
+        // 移除NUL字符
+        String sanitized = content.replace("\0", "");
+        // 替换其他控制字符（保留换行和制表符）
+        sanitized = sanitized.replaceAll("[\\x00-\\x08\\x0B-\\x0C\\x0E-\\x1F]", "");
+        return sanitized;
     }
 
     @PostMapping("/parse-document")
@@ -98,6 +137,11 @@ public class AiController {
             String userMessage = (String) data.get("message");
             Integer projectId = data.get("projectId") != null ? Integer.valueOf(data.get("projectId").toString()) : null;
             
+            System.out.println("===== AI聊天请求开始 =====");
+            System.out.println("用户ID: " + userId);
+            System.out.println("用户消息: " + userMessage);
+            System.out.println("项目ID: " + projectId);
+            
             // 保存用户消息
             AiConversation userConversation = new AiConversation();
             userConversation.setUserId(userId);
@@ -117,6 +161,8 @@ public class AiController {
             wrapper.last("LIMIT 20");
             List<AiConversation> history = aiConversationService.list(wrapper);
             
+            System.out.println("历史对话数量: " + history.size());
+            
             // 构建上下文
             StringBuilder context = new StringBuilder();
             for (AiConversation conv : history) {
@@ -126,14 +172,19 @@ public class AiController {
             // 调用AI服务，带上项目上下文
             String aiResponse;
             try {
+                System.out.println("开始调用AI服务...");
                 if (context.length() > 0) {
                     aiResponse = aiService.chatWithContext(context.toString() + "\nuser: " + userMessage, projectId);
                 } else {
                     aiResponse = aiService.chatWithContext(userMessage, projectId);
                 }
+                System.out.println("AI服务调用成功，响应长度: " + aiResponse.length());
             } catch (Exception e) {
+                System.out.println("===== AI服务调用失败 =====");
+                System.out.println("错误类型: " + e.getClass().getName());
+                System.out.println("错误信息: " + e.getMessage());
                 e.printStackTrace();
-                aiResponse = "抱歉，AI服务暂时不可用，请稍后再试。";
+                aiResponse = "抱歉，AI服务暂时不可用，请稍后再试。错误详情: " + e.getMessage();
             }
 
             // 保存AI消息
@@ -220,11 +271,22 @@ public class AiController {
     }
 
     @PostMapping("/knowledge/add")
-    public Map<String, Object> addKnowledge(@RequestBody KnowledgeDocument document) {
+    public Map<String, Object> addKnowledge(HttpServletRequest request, @RequestBody KnowledgeDocument document) {
         try {
+            Integer userId = jwtUtils.getUserIdFromToken(request.getHeader("Authorization"));
+            document.setUserId(userId);
+            document.setCreatedBy(userId);
+            if (document.getCreatedAt() == null) {
+                document.setCreatedAt(LocalDateTime.now());
+            }
+            // 清理内容
+            if (document.getContent() != null) {
+                document.setContent(sanitizeContent(document.getContent()));
+            }
             knowledgeDocumentService.create(document);
             return Map.of("success", true, "message", "知识添加成功");
         } catch (Exception e) {
+            e.printStackTrace();
             return Map.of("success", false, "message", e.getMessage());
         }
     }

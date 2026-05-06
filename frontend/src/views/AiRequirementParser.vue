@@ -1,4 +1,4 @@
-﻿﻿﻿﻿<template>
+﻿﻿﻿﻿﻿﻿﻿<template>
   <div class="ai-requirement-parser">
     <el-card>
       <template #header>
@@ -19,8 +19,7 @@
             class="upload-demo"
             drag
             :http-request="customUpload"
-            :on-success="handleUploadSuccess"
-            :on-error="handleUploadError"
+            :auto-upload="true"
             :before-upload="beforeUpload"
             :limit="1"
             :disabled="isParsing"
@@ -189,9 +188,39 @@ const customUpload = async (options: any) => {
   
   try {
     const result: any = await apiClient.post('/ai/upload-document', formData);
-    options.onSuccess(result);
+    console.log('上传成功，响应:', result);
+    
+    // 直接处理响应，不依赖 el-upload 的回调
+    if (result && result.success) {
+      parseResult.value = result.data;
+      try {
+        // 更健壮的JSON解析逻辑
+        let jsonStr = result.data;
+        // 移除可能的markdown代码块标记
+        jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
+        
+        // 找到第一个{和最后一个}
+        const startIndex = jsonStr.indexOf('{');
+        const endIndex = jsonStr.lastIndexOf('}');
+        
+        if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+          jsonStr = jsonStr.substring(startIndex, endIndex + 1);
+          parsedData.value = JSON.parse(jsonStr);
+          console.log('上传解析后的JSON数据:', parsedData.value);
+        } else {
+          throw new Error('未找到有效的JSON格式');
+        }
+      } catch (e) {
+        console.log('上传结果JSON解析失败:', e);
+        parsedData.value = null;
+      }
+      ElMessage.success('上传并解析完成');
+    } else {
+      ElMessage.error(result?.message || '上传失败');
+    }
   } catch (error) {
-    options.onError(error);
+    console.error('上传失败:', error);
+    ElMessage.error('上传失败，请检查后端服务或文件格式');
   } finally {
     isParsing.value = false;
   }
@@ -267,49 +296,6 @@ const parseContent = async () => {
   } finally {
     isParsing.value = false;
   }
-};
-
-const handleUploadSuccess = (response: any) => {
-  console.log('上传成功，响应:', response);
-  
-  // 检查 response 是否存在
-  if (!response) {
-    ElMessage.error('服务器无响应');
-    return;
-  }
-  
-  if (response.success) {
-    parseResult.value = response.data;
-    try {
-      // 更健壮的JSON解析逻辑
-      let jsonStr = response.data;
-      // 移除可能的markdown代码块标记
-      jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
-      
-      // 找到第一个{和最后一个}
-      const startIndex = jsonStr.indexOf('{');
-      const endIndex = jsonStr.lastIndexOf('}');
-      
-      if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
-        jsonStr = jsonStr.substring(startIndex, endIndex + 1);
-        parsedData.value = JSON.parse(jsonStr);
-        console.log('上传解析后的JSON数据:', parsedData.value);
-      } else {
-        throw new Error('未找到有效的JSON格式');
-      }
-    } catch (e) {
-      console.log('上传结果JSON解析失败:', e);
-      parsedData.value = null;
-    }
-    ElMessage.success('上传并解析完成');
-  } else {
-    ElMessage.error(response?.message || '上传失败');
-  }
-};
-
-const handleUploadError = () => {
-  console.error('上传失败');
-  ElMessage.error('上传失败，请检查后端服务或文件格式');
 };
 
 const goBack = () => {
