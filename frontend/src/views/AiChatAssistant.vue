@@ -334,11 +334,7 @@ const customUpload = async (options: any) => {
   }
   
   try {
-    const result: any = await apiClient.post('/ai/upload-document', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+    const result: any = await apiClient.post('/ai/upload-document', formData);
     options.onSuccess(result);
   } catch (error) {
     options.onError(error);
