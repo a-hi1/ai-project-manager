@@ -51,17 +51,20 @@ public class AiController {
             String fileName = file.getOriginalFilename();
             String content = new String(file.getBytes());
 
-            // 保存文档到知识库
+            // 先保存文档，不立即向量化，避免失败
             KnowledgeDocument document = new KnowledgeDocument();
             document.setUserId(userId);
             document.setProjectId(projectId);
             document.setFileName(fileName);
+            document.setTitle(fileName);
+            document.setDocType("file");
             document.setContent(content);
             document.setCreatedAt(LocalDateTime.now());
-            knowledgeDocumentService.create(document);
+            knowledgeDocumentService.save(document);
 
             return Map.of("success", true, "message", "文档上传成功", "documentId", document.getId(), "fileName", fileName);
         } catch (Exception e) {
+            e.printStackTrace();
             return Map.of("success", false, "message", "文件上传失败: " + e.getMessage());
         }
     }
