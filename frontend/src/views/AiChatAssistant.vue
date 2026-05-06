@@ -197,7 +197,7 @@
           拖拽文档到此处，或<em>点击上传</em>
         </div>
         <template #tip>
-          <div class="el-upload__tip">支持 .txt, .md, .docx 等文本文件</div>
+          <div class="el-upload__tip">支持文本文件、Office文档、代码文件等（.txt/.md/.docx/.xlsx/.pptx/.js/.ts/.py/.java/.pdf等）</div>
         </template>
       </el-upload>
     </el-dialog>
@@ -573,15 +573,28 @@ const sendMessage = async () => {
 };
 
 const beforeUpload = (file: any) => {
-  const isText = file.type.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.docx');
-  if (!isText) {
-    ElMessage.error('只能上传文本文件！');
+  const allowedExtensions = [
+    '.txt', '.md', '.rst', '.rtf',
+    '.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt',
+    '.js', '.ts', '.py', '.java', '.go', '.cpp', '.c', '.h',
+    '.html', '.css', '.json', '.xml', '.yaml', '.yml',
+    '.csv', '.log', '.sql', '.ini', '.cfg', '.conf',
+    '.sh', '.bat', '.ps1',
+    '.pdf'
+  ];
+  const fileNameLower = file.name.toLowerCase();
+  const isAllowed = file.type.startsWith('text/') || 
+                   file.type.startsWith('application/') || 
+                   allowedExtensions.some(ext => fileNameLower.endsWith(ext));
+  
+  if (!isAllowed) {
+    ElMessage.error('文件类型不支持！');
   }
   const isLt10M = file.size / 1024 / 1024 < 10;
   if (!isLt10M) {
     ElMessage.error('文件大小不能超过 10MB！');
   }
-  return isText && isLt10M;
+  return isAllowed && isLt10M;
 };
 
 const handleUploadSuccess = (response: any) => {

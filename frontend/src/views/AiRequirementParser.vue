@@ -18,10 +18,10 @@
           <el-upload
             class="upload-demo"
             drag
-            :action="uploadUrl"
-            :headers="uploadHeaders"
+            :http-request="customUpload"
             :on-success="handleUploadSuccess"
             :on-error="handleUploadError"
+            :before-upload="beforeUpload"
             :limit="1"
             :disabled="isParsing"
           >
@@ -30,7 +30,7 @@
               拖拽需求文档到此处，或<em>点击上传</em>
             </div>
             <template #tip>
-              <div class="el-upload__tip">支持纯文本文件，AI将自动解析并提取功能点</div>
+              <div class="el-upload__tip">支持文本文件、Office文档、代码文件等（.txt/.md/.docx/.xlsx/.pptx/.js/.ts/.py/.java/.pdf等）</div>
             </template>
           </el-upload>
         </el-tab-pane>
@@ -179,6 +179,45 @@ const uploadHeaders = computed(() => {
 const contentForm = ref({
   content: ''
 });
+
+const customUpload = async (options: any) => {
+  const { file } = options;
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('projectId', '1');
+  
+  try {
+    const result: any = await apiClient.post('/ai/upload-document', formData);
+    options.onSuccess(result);
+  } catch (error) {
+    options.onError(error);
+  }
+};
+
+const beforeUpload = (file: any) => {
+  const allowedExtensions = [
+    '.txt', '.md', '.rst', '.rtf',
+    '.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt',
+    '.js', '.ts', '.py', '.java', '.go', '.cpp', '.c', '.h',
+    '.html', '.css', '.json', '.xml', '.yaml', '.yml',
+    '.csv', '.log', '.sql', '.ini', '.cfg', '.conf',
+    '.sh', '.bat', '.ps1',
+    '.pdf'
+  ];
+  const fileNameLower = file.name.toLowerCase();
+  const isAllowed = file.type.startsWith('text/') || 
+                   file.type.startsWith('application/') || 
+                   allowedExtensions.some(ext => fileNameLower.endsWith(ext));
+  
+  if (!isAllowed) {
+    ElMessage.error('文件类型不支持！');
+  }
+  const isLt10M = file.size / 1024 / 1024 < 10;
+  if (!isLt10M) {
+    ElMessage.error('文件大小不能超过 10MB！');
+  }
+  return isAllowed && isLt10M;
+};
 
 const parseContent = async () => {
   if (!contentForm.value.content) {
