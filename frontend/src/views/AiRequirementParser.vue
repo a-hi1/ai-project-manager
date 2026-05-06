@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿<template>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<template>
   <div class="ai-requirement-parser">
     <el-card>
       <template #header>
@@ -166,14 +166,6 @@ const activeTab = ref('paste');
 const isParsing = ref(false);
 const parseResult = ref('');
 const parsedData = ref<any>(null);
-const token = localStorage.getItem('token') || '';
-const uploadUrl = computed(() => `/ai/upload-document?projectId=1`);
-
-const uploadHeaders = computed(() => {
-  return {
-    Authorization: `Bearer ${token}`
-  };
-});
 
 const contentForm = ref({
   content: ''
@@ -191,7 +183,7 @@ const customUpload = async (options: any) => {
     console.log('上传成功，响应:', result);
     
     // 直接处理响应，不依赖 el-upload 的回调
-    if (result && result.success) {
+    if (result && result.data) {
       parseResult.value = result.data;
       try {
         // 更健壮的JSON解析逻辑
@@ -263,7 +255,7 @@ const parseContent = async () => {
     const apiResult: any = await apiClient.post('/ai/parse-document', { content: contentForm.value.content });
     console.log('解析结果:', apiResult);
     
-    if (apiResult.success) {
+    if (apiResult.data) {
       parseResult.value = apiResult.data;
       try {
         // 尝试解析JSON结果 - 更健壮的解析逻辑

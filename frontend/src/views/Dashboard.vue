@@ -195,10 +195,8 @@ const getStatusName = (status: string) => {
 const fetchDashboardData = async () => {
   try {
     const projectsResult: any = await apiClient.get('/project/list');
-    if (projectsResult.success) {
-      projects.value = projectsResult.data || [];
-      stats.value.totalProjects = projectsResult.data.length;
-    }
+    projects.value = projectsResult.data || [];
+    stats.value.totalProjects = projects.value.length;
 
     let totalTasks = 0;
     let totalRisks = 0;
@@ -215,9 +213,9 @@ const fetchDashboardData = async () => {
         ]);
 
         return {
-          tasks: tasksResult.success ? tasksResult.data.length : 0,
-          risks: risksResult.success ? risksResult.data.length : 0,
-          bugs: bugsResult.success ? bugsResult.data.length : 0
+          tasks: tasksResult.data?.length || 0,
+          risks: risksResult.data?.length || 0,
+          bugs: bugsResult.data?.length || 0
         };
       } catch {
         // 如果某个项目的请求失败，返回0值，不影响其他项目
@@ -331,19 +329,16 @@ const checkRiskAlerts = async () => {
   const projectPromises = projects.value.map(async (project) => {
     try {
       const tasksResult: any = await apiClient.get(`/task/project/${project.id}`);
-      if (tasksResult.success) {
-        const overdueTasks = tasksResult.data.filter((t: any) => {
-          if (!t.endDate || t.status === 'done') return false;
-          return new Date(t.endDate) < new Date();
-        });
+      const overdueTasks = (tasksResult.data || []).filter((t: any) => {
+        if (!t.endDate || t.status === 'done') return false;
+        return new Date(t.endDate) < new Date();
+      });
 
-        return overdueTasks.map(task => ({
-          title: `项目"${project.name}"存在延期任务`,
-          description: `任务"${task.name}"已过期，但状态为"${getStatusName(task.status)}"`,
-          type: 'warning'
-        }));
-      }
-      return [];
+      return overdueTasks.map((task: any) => ({
+        title: `项目"${project.name}"存在延期任务`,
+        description: `任务"${task.name}"已过期，但状态为"${getStatusName(task.status)}"`,
+        type: 'warning'
+      }));
     } catch {
       return [];
     }

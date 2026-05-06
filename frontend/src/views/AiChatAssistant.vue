@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿<template>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<template>
   <div class="ai-chat-assistant">
     <div class="chat-layout">
       <!-- 侧边栏 -->
@@ -254,9 +254,7 @@ const loadProjects = async () => {
   loadingProjects.value = true;
   try {
     const result: any = await apiClient.get('/project/list');
-    if (result.success) {
-      projects.value = result.data;
-    }
+    projects.value = result.data || [];
   } catch (error) {
     console.error('加载项目失败:', error);
   } finally {
@@ -282,9 +280,9 @@ const callAIFunction = async (endpoint: string, functionName: string) => {
   isThinking.value = true;
 
   try {
-    const result: any = await apiClient.post(`/api/ai/${endpoint}/${selectedProjectId.value}`);
+    const result: any = await apiClient.post(`/ai/${endpoint}/${selectedProjectId.value}`);
 
-    if (result.success && result.data) {
+    if (result.data) {
       isThinking.value = false;
       const fullResponse = result.data;
       let i = 0;
@@ -341,9 +339,7 @@ const customUpload = async (options: any) => {
   }
 };
 
-const uploadHeaders = computed(() => ({
-  Authorization: `Bearer ${token}`
-}));
+
 
 const formatMessage = (msg: string) => {
   if (!msg) return '';
@@ -383,90 +379,45 @@ const useQuickQuestion = (question: string) => {
   sendMessage();
 };
 
-const loadConversations = async () => {
+const STORAGE_KEY = 'ai_conversations';
+
+// 从 localStorage 加载会话
+const loadConversationsFromStorage = () => {
   try {
-    const result: any = await apiClient.get('/ai/conversation/history');
-    if (result.success) {
-      // 保持当前会话ID和消息状态
-      const currentId = activeConversationId.value;
-      const currentMessages = [...messages.value];
-      const currentConversations = [...conversations.value];
-      
-      const groupedConversations = groupConversations(result.data);
-      
-      // 只保留有消息的会话
-      let validConversations = groupedConversations.filter(conv => 
-        conv.messages && conv.messages.length > 0
-      );
-      
-      // 如果当前有活跃会话，优先保留它
-      if (currentId && currentMessages.length > 0) {
-        // 检查当前会话是否在新加载的列表中
-        const existingConvIndex = validConversations.findIndex(c => c.id === currentId);
-        
-        if (existingConvIndex >= 0) {
-          // 更新该会话的消息
-          validConversations[existingConvIndex].messages = [...currentMessages];
-        } else {
-          // 不在列表中，添加进去
-          const firstUserMsg = currentMessages.find(m => m.role === 'user');
-          const newConv = {
-            id: currentId,
-            title: firstUserMsg 
-              ? (firstUserMsg.message.length > 30 
-                  ? firstUserMsg.message.substring(0, 30) + '...' 
-                  : firstUserMsg.message)
-              : '新会话',
-            messages: [...currentMessages],
-            updatedAt: new Date().toISOString()
-          };
-          validConversations.unshift(newConv);
-        }
-      }
-      
-      conversations.value = validConversations;
-      
-      // 只有列表有内容且当前没有会话时才选第一个
-      if (validConversations.length > 0 && !currentId) {
-        const firstConv = validConversations[0];
-        selectConversation(firstConv);
-      }
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
     }
-  } catch (error) {
-    console.error('加载会话历史失败:', error);
+  } catch (e) {
+    console.error('加载会话失败:', e);
+  }
+  return [];
+};
+
+// 保存会话到 localStorage
+const saveConversationsToStorage = () => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations.value));
+  } catch (e) {
+    console.error('保存会话失败:', e);
   }
 };
 
-const groupConversations = (allMessages: any[]) => {
-  const convMap = new Map<string, any>();
-  let currentConvId: string | null = null;
-  let currentTitle = '新会话';
+const loadConversations = async () => {
+  // 优先从 localStorage 加载
+  const storedConversations = loadConversationsFromStorage();
   
-  // 改进分组逻辑：按用户消息间隔分组，避免随机分组
-  allMessages.forEach(msg => {
-    if (msg.role === 'user' && !currentConvId) {
-      // 新用户消息，创建新会话
-      currentConvId = 'conv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
-      currentTitle = msg.message.length > 30 ? msg.message.substring(0, 30) + '...' : msg.message;
-      convMap.set(currentConvId, {
-        id: currentConvId,
-        title: currentTitle,
-        messages: [],
-        updatedAt: msg.createdAt
-      });
-    }
+  if (storedConversations.length > 0) {
+    conversations.value = storedConversations;
     
-    if (currentConvId) {
-      const conv = convMap.get(currentConvId);
-      conv.messages.push(msg);
-      conv.updatedAt = msg.createdAt;
+    // 如果有会话且当前没有活跃会话，选择第一个
+    if (!activeConversationId.value) {
+      selectConversation(storedConversations[0]);
     }
-  });
-  
-  return Array.from(convMap.values()).sort((a, b) => 
-    new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  );
+  }
 };
+
+
 
 const selectConversation = (conv: any) => {
   activeConversationId.value = conv.id;
@@ -488,6 +439,9 @@ const createNewConversation = () => {
   };
   conversations.value.unshift(newConversation);
   
+  // 保存到 localStorage
+  saveConversationsToStorage();
+  
   ElMessage.success('新会话已创建');
 };
 
@@ -497,15 +451,15 @@ const loadConversationHistory = async () => {
 
 const clearConversation = async () => {
   try {
-    const result: any = await apiClient.delete('/ai/conversation/clear');
-    if (result.success) {
-      conversations.value = [];
-      messages.value = [];
-      activeConversationId.value = null;
-      ElMessage.success('对话已清空');
-    } else {
-      ElMessage.error(result.message || '清空失败');
-    }
+    // 清除所有会话
+    conversations.value = [];
+    messages.value = [];
+    activeConversationId.value = null;
+    
+    // 清除 localStorage
+    localStorage.removeItem(STORAGE_KEY);
+    
+    ElMessage.success('对话已清空');
   } catch (error) {
     ElMessage.error('清空失败，请检查网络连接');
   }
@@ -537,7 +491,7 @@ const sendMessage = async () => {
         projectId: selectedProjectId.value
       });
     
-    if (chatResult.success) {
+    if (chatResult.data) {
       isThinking.value = false;
       
       const fullResponse = chatResult.data;
@@ -577,8 +531,18 @@ const sendMessage = async () => {
               }
               currentConv.messages = [...messages.value];
               currentConv.updatedAt = new Date().toISOString();
+              
+              // 将会话移到列表顶部
+              const index = conversations.value.findIndex(c => c.id === activeConversationId.value);
+              if (index > 0) {
+                const [conv] = conversations.value.splice(index, 1);
+                conversations.value.unshift(conv);
+              }
             }
           }
+          
+          // 保存到 localStorage
+          saveConversationsToStorage();
         }
       };
       
@@ -631,14 +595,10 @@ const beforeUpload = (file: any) => {
 };
 
 const handleUploadSuccess = (response: any) => {
-  if (response.success) {
-    ElMessage.success('文档上传成功！');
-    showUploadDialog.value = false;
-    fileList.value = [];
-    inputMessage.value = `请帮我分析一下刚刚上传的文档：${response.fileName}`;
-  } else {
-    ElMessage.error(response.message || '上传失败');
-  }
+  ElMessage.success('文档上传成功！');
+  showUploadDialog.value = false;
+  fileList.value = [];
+  inputMessage.value = `请帮我分析一下刚刚上传的文档：${response.fileName}`;
 };
 
 const handleUploadError = (_error: any) => {

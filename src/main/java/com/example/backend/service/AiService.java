@@ -448,71 +448,95 @@ public class AiService {
     }
 
     public String analyzeProjectHealth(Integer projectId) {
-        String context = getProjectContext(projectId);
-        String prompt = """
-            请基于以下项目信息，进行全面的项目健康度分析：
+        try {
+            String context = getProjectContext(projectId);
+            String prompt = """
+                请基于以下项目信息，进行全面的项目健康度分析：
+                
+                %s
+                
+                请提供以下内容：
+                1. 项目整体健康度评分（0-100分）
+                2. 优势分析（至少3点）
+                3. 存在问题（至少3点）
+                4. 改进建议（具体、可操作）
+                5. 下一步行动建议
+                """.formatted(context);
             
-            %s
-            
-            请提供以下内容：
-            1. 项目整体健康度评分（0-100分）
-            2. 优势分析（至少3点）
-            3. 存在问题（至少3点）
-            4. 改进建议（具体、可操作）
-            5. 下一步行动建议
-            """.formatted(context);
-        
-        return chatModel.generate(prompt);
+            return chatModel.generate(prompt);
+        } catch (Exception e) {
+            System.out.println("===== analyzeProjectHealth 调用失败 =====");
+            e.printStackTrace();
+            return "抱歉，分析失败：" + e.getMessage();
+        }
     }
 
     public String generateDailyReport(Integer projectId) {
-        String context = getProjectContext(projectId);
-        String prompt = """
-            请基于以下项目信息，生成一份简洁的项目日报：
+        try {
+            String context = getProjectContext(projectId);
+            String prompt = """
+                请基于以下项目信息，生成一份简洁的项目日报：
+                
+                %s
+                
+                日报内容应包括：
+                1. 今日进展（任务完成情况）
+                2. 当前问题（风险和缺陷）
+                3. 明日计划
+                4. 需要协调的事项
+                """.formatted(context);
             
-            %s
-            
-            日报内容应包括：
-            1. 今日进展（任务完成情况）
-            2. 当前问题（风险和缺陷）
-            3. 明日计划
-            4. 需要协调的事项
-            """.formatted(context);
-        
-        return chatModel.generate(prompt);
+            return chatModel.generate(prompt);
+        } catch (Exception e) {
+            System.out.println("===== generateDailyReport 调用失败 =====");
+            e.printStackTrace();
+            return "抱歉，生成日报失败：" + e.getMessage();
+        }
     }
 
     public String suggestTasks(Integer projectId) {
-        String context = getProjectContext(projectId);
-        String prompt = """
-            请基于以下项目信息，分析当前项目状态并建议下一步优先处理的任务：
+        try {
+            String context = getProjectContext(projectId);
+            String prompt = """
+                请基于以下项目信息，分析当前项目状态并建议下一步优先处理的任务：
+                
+                %s
+                
+                请提供：
+                1. 3-5个优先级最高的建议任务
+                2. 每个任务的预期成果和时间安排
+                3. 建议的负责人角色
+                """.formatted(context);
             
-            %s
-            
-            请提供：
-            1. 3-5个优先级最高的建议任务
-            2. 每个任务的预期成果和时间安排
-            3. 建议的负责人角色
-            """.formatted(context);
-        
-        return chatModel.generate(prompt);
+            return chatModel.generate(prompt);
+        } catch (Exception e) {
+            System.out.println("===== suggestTasks 调用失败 =====");
+            e.printStackTrace();
+            return "抱歉，生成任务建议失败：" + e.getMessage();
+        }
     }
 
     public String summarizeProject(Integer projectId) {
-        String context = getProjectContext(projectId);
-        String prompt = """
-            请基于以下项目信息，生成一份项目总结报告：
+        try {
+            String context = getProjectContext(projectId);
+            String prompt = """
+                请基于以下项目信息，生成一份项目总结报告：
+                
+                %s
+                
+                总结内容应包括：
+                1. 项目概况（一句话介绍）
+                2. 当前进度概述
+                3. 项目亮点
+                4. 主要挑战
+                5. 关键建议
+                """.formatted(context);
             
-            %s
-            
-            总结内容应包括：
-            1. 项目概况（一句话介绍）
-            2. 当前进度概述
-            3. 项目亮点
-            4. 主要挑战
-            5. 关键建议
-            """.formatted(context);
-        
-        return chatModel.generate(prompt);
+            return chatModel.generate(prompt);
+        } catch (Exception e) {
+            System.out.println("===== summarizeProject 调用失败 =====");
+            e.printStackTrace();
+            return "抱歉，生成项目总结失败：" + e.getMessage();
+        }
     }
 }
