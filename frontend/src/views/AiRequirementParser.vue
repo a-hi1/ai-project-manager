@@ -1,4 +1,4 @@
-﻿<template>
+﻿﻿﻿<template>
   <div class="ai-requirement-parser">
     <el-card>
       <template #header>
@@ -182,6 +182,7 @@ const contentForm = ref({
 
 const customUpload = async (options: any) => {
   const { file } = options;
+  isParsing.value = true;
   const formData = new FormData();
   formData.append('file', file);
   formData.append('projectId', '1');
@@ -191,6 +192,8 @@ const customUpload = async (options: any) => {
     options.onSuccess(result);
   } catch (error) {
     options.onError(error);
+  } finally {
+    isParsing.value = false;
   }
 };
 
