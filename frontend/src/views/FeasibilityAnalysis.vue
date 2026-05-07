@@ -1,4 +1,4 @@
-﻿﻿﻿<template>
+﻿﻿﻿﻿<template>
   <div class="feasibility-analysis">
     <el-card>
       <template #header>

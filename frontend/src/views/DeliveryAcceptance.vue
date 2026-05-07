@@ -17,6 +17,7 @@
       <el-table :data="deliverables" style="width: 100%">
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="name" label="交付物名称" />
+        <el-table-column prop="fileName" label="文件名" width="200" />
         <el-table-column prop="description" label="描述" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
@@ -24,13 +25,14 @@
           </template>
         </el-table-column>
         <el-table-column prop="submittedAt" label="提交时间" width="180" />
-        <el-table-column label="操作" width="250">
+        <el-table-column label="操作" width="320">
           <template #default="scope">
             <template v-if="scope.row.status === 'pending'">
               <el-button type="success" size="small" @click="approveDeliverable(scope.row)">通过</el-button>
               <el-button type="danger" size="small" @click="rejectDeliverable(scope.row)">拒绝</el-button>
             </template>
             <el-button type="info" size="small" @click="viewDeliverable(scope.row)">查看</el-button>
+            <el-button type="primary" size="small" @click="downloadDeliverable(scope.row)" v-if="scope.row.filePath">下载</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -45,13 +47,31 @@
         <el-form-item label="描述">
           <el-input v-model="deliverableForm.description" type="textarea" placeholder="请输入描述" />
         </el-form-item>
-        <el-form-item label="文件路径">
-          <el-input v-model="deliverableForm.filePath" placeholder="请输入文件路径或上传文件" />
+        <el-form-item label="选择文件">
+          <el-upload
+            drag
+            :auto-upload="false"
+            :limit="1"
+            :file-list="fileList"
+            :on-change="handleFileChange"
+            :on-remove="handleFileRemove"
+            :before-upload="beforeUpload"
+            ref="uploadRef">
+            <el-icon class="el-icon--upload" :size="40"><UploadFilled /></el-icon>
+            <div class="el-upload__text">
+              拖拽文件到此处，或<em>点击上传</em>
+            </div>
+            <template #tip>
+              <div class="el-upload__tip">
+                支持所有格式的文件，单个文件不超过 100MB
+              </div>
+            </template>
+          </el-upload>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showDeliverableDialog = false">取消</el-button>
-        <el-button type="primary" @click="submitDeliverable">提交</el-button>
+        <el-button type="primary" @click="submitDeliverable" :loading="submitting">提交</el-button>
       </template>
     </el-dialog>
 
@@ -82,7 +102,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { ArrowLeft } from '@element-plus/icons-vue';
+import { ArrowLeft, UploadFilled } from '@element-plus/icons-vue';
 import apiClient from '../utils/api';
 
 const route = useRoute();
@@ -92,11 +112,13 @@ const projectId = Number(route.params.id);
 const deliverables = ref<any[]>([]);
 const showDeliverableDialog = ref(false);
 const showDetailDialog = ref(false);
+const submitting = ref(false);
+const fileList = ref<any[]>([]);
+const selectedFile = ref<File | null>(null);
 
 const deliverableForm = ref({
   name: '',
-  description: '',
-  filePath: ''
+  description: ''
 });
 
 const deliverableDetail = ref<any>({});
@@ -104,26 +126,57 @@ const deliverableDetail = ref<any>({});
 const fetchDeliverables = async () => {
   try {
     const result: any = await apiClient.get(`/deliverable/project/${projectId}`);
-    if (result.success) {
-      deliverables.value = result.data;
+    if (result.data || result.success) {
+      deliverables.value = result.data || [];
     }
   } catch (error) {
     ElMessage.error('获取交付物列表失败');
   }
 };
 
+const handleFileChange = (file: any) => {
+  selectedFile.value = file.raw;
+};
+
+const handleFileRemove = () => {
+  selectedFile.value = null;
+};
+
+const beforeUpload = (file: File) => {
+  const isLt100M = file.size / 1024 / 1024 < 100;
+  if (!isLt100M) {
+    ElMessage.error('文件大小不能超过 100MB!');
+    return false;
+  }
+  return true;
+};
+
 const submitDeliverable = async () => {
+  if (!deliverableForm.value.name) {
+    ElMessage.warning('请输入交付物名称');
+    return;
+  }
+  
+  if (!selectedFile.value) {
+    ElMessage.warning('请选择要上传的文件');
+    return;
+  }
+  
+  submitting.value = true;
+  
   try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const result: any = await apiClient.post('/deliverable/create', {
-      projectId,
-      name: deliverableForm.value.name,
-      description: deliverableForm.value.description,
-      filePath: deliverableForm.value.filePath,
-      submittedBy: user.id,
-      status: 'pending'
-    });
-    if (result.success) {
+    const formData = new FormData();
+    formData.append('file', selectedFile.value);
+    formData.append('projectId', projectId.toString());
+    formData.append('name', deliverableForm.value.name);
+    if (deliverableForm.value.description) {
+      formData.append('description', deliverableForm.value.description);
+    }
+    
+    // 不手动设置 Content-Type，让 axios 自动处理
+    const result: any = await apiClient.post('/deliverable/upload', formData);
+    
+    if (result.data || result.success) {
       ElMessage.success('交付物提交成功');
       showDeliverableDialog.value = false;
       resetForm();
@@ -131,9 +184,22 @@ const submitDeliverable = async () => {
     } else {
       ElMessage.error(result.message || '提交失败');
     }
-  } catch (error) {
-    ElMessage.error('网络错误');
+  } catch (error: any) {
+    console.error('上传错误:', error);
+    ElMessage.error(error.response?.data?.message || '网络错误');
+  } finally {
+    submitting.value = false;
   }
+};
+
+const downloadDeliverable = (deliverable: any) => {
+  if (!deliverable.filePath) {
+    ElMessage.warning('该交付物没有文件');
+    return;
+  }
+  
+  const filePath = encodeURIComponent(deliverable.filePath);
+  window.open(`/api/deliverable/download?filePath=${filePath}`, '_blank');
 };
 
 const viewDeliverable = (deliverable: any) => {
@@ -147,7 +213,7 @@ const approveDeliverable = async (deliverable: any) => {
     const result: any = await apiClient.put(`/deliverable/approve/${deliverable.id}`, {
       reviewerId: user.id
     });
-    if (result.success) {
+    if (result.data || result.success) {
       ElMessage.success('交付物已通过');
       fetchDeliverables();
     } else {
@@ -162,9 +228,10 @@ const rejectDeliverable = async (deliverable: any) => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const result: any = await apiClient.put(`/deliverable/reject/${deliverable.id}`, {
-      reviewerId: user.id
+      reviewerId: user.id,
+      comments: ''
     });
-    if (result.success) {
+    if (result.data || result.success) {
       ElMessage.success('交付物已拒绝');
       fetchDeliverables();
     } else {
@@ -178,9 +245,10 @@ const rejectDeliverable = async (deliverable: any) => {
 const resetForm = () => {
   deliverableForm.value = {
     name: '',
-    description: '',
-    filePath: ''
+    description: ''
   };
+  fileList.value = [];
+  selectedFile.value = null;
 };
 
 const getStatusType = (status: string) => {
@@ -234,5 +302,9 @@ onMounted(() => {
   font-size: 20px;
   font-weight: 600;
   color: #303133;
+}
+
+.upload-demo {
+  margin-bottom: 20px;
 }
 </style>

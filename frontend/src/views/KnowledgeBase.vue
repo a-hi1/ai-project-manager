@@ -1,4 +1,4 @@
-﻿﻿﻿<template>
+﻿﻿﻿﻿<template>
   <div class="knowledge-base">
     <el-card>
       <template #header>
@@ -10,10 +10,16 @@
             </el-button>
             <h2>知识库</h2>
           </div>
-          <el-button type="primary" @click="showAddDialog = true">
-            <el-icon><Plus /></el-icon>
-            添加知识
-          </el-button>
+          <div class="header-right">
+            <el-button type="success" @click="showUploadDialog = true">
+              <el-icon><Upload /></el-icon>
+              上传文档
+            </el-button>
+            <el-button type="primary" @click="showAddDialog = true">
+              <el-icon><Plus /></el-icon>
+              添加知识
+            </el-button>
+          </div>
         </div>
       </template>
 
@@ -96,11 +102,57 @@
         </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
+
+    <!-- 上传文档对话框 -->
+    <el-dialog v-model="showUploadDialog" title="上传文档" width="600px">
+      <el-form :model="uploadForm" label-width="100px">
+        <el-form-item label="项目">
+          <el-select v-model="uploadForm.projectId" placeholder="请选择项目" style="width: 100%">
+            <el-option label="默认项目" :value="1" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="文档类型">
+          <el-select v-model="uploadForm.docType" placeholder="请选择类型" style="width: 100%">
+            <el-option label="需求文档" value="requirement" />
+            <el-option label="技术文档" value="technical" />
+            <el-option label="管理文档" value="management" />
+            <el-option label="其他" value="other" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="选择文件">
+          <el-upload
+            class="upload-demo"
+            drag
+            :action="uploadUrl"
+            :headers="uploadHeaders"
+            :data="uploadData"
+            :on-success="handleUploadSuccess"
+            :on-error="handleUploadError"
+            :before-upload="beforeUpload"
+            :limit="1"
+            :file-list="fileList"
+            :auto-upload="false"
+            ref="uploadRef">
+            <el-icon class="el-icon--upload" :size="40"><UploadFilled /></el-icon>
+            <div class="el-upload__text">
+              拖拽文档到此处，或<em>点击上传</em>
+            </div>
+            <template #tip>
+              <div class="el-upload__tip">支持文本文件、Office文档、PDF等（.txt/.md/.docx/.xlsx/.pptx/.pdf等）</div>
+            </template>
+          </el-upload>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showUploadDialog = false">取消</el-button>
+        <el-button type="primary" @click="submitUpload" :loading="uploading">上传</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
@@ -109,7 +161,9 @@ import {
   Search,
   RefreshLeft,
   View,
-  Delete
+  Delete,
+  Upload,
+  UploadFilled
 } from '@element-plus/icons-vue';
 import apiClient from '../utils/api';
 
@@ -118,6 +172,31 @@ const documents = ref<any[]>([]);
 const loading = ref(false);
 const showAddDialog = ref(false);
 const showDetailDialog = ref(false);
+const showUploadDialog = ref(false);
+const uploading = ref(false);
+const fileList = ref<any[]>([]);
+const uploadRef = ref();
+
+const uploadForm = ref({
+  projectId: 1,
+  docType: 'requirement'
+});
+
+const token = localStorage.getItem('token') || '';
+
+const uploadUrl = computed(() => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+  return `${baseUrl}/ai/upload-document`;
+});
+
+const uploadHeaders = computed(() => ({
+  Authorization: token ? `Bearer ${token}` : ''
+}));
+
+const uploadData = computed(() => ({
+  projectId: uploadForm.value.projectId,
+  docType: uploadForm.value.docType
+}));
 
 const searchForm = ref({
   keyword: ''
@@ -260,6 +339,63 @@ const goBack = () => {
   router.back();
 };
 
+// 上传相关函数
+const beforeUpload = (file: any) => {
+  const allowedExtensions = [
+    '.txt', '.md', '.rst', '.rtf',
+    '.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt',
+    '.js', '.ts', '.py', '.java', '.go', '.cpp', '.c', '.h',
+    '.html', '.css', '.json', '.xml', '.yaml', '.yml',
+    '.csv', '.log', '.sql', '.ini', '.cfg', '.conf',
+    '.sh', '.bat', '.ps1',
+    '.pdf'
+  ];
+  const fileNameLower = file.name.toLowerCase();
+  const isAllowed = file.type.startsWith('text/') || 
+                   file.type.startsWith('application/') || 
+                   allowedExtensions.some(ext => fileNameLower.endsWith(ext));
+  
+  if (!isAllowed) {
+    ElMessage.error('文件类型不支持！');
+  }
+  const isLt10M = file.size / 1024 / 1024 < 10;
+  if (!isLt10M) {
+    ElMessage.error('文件大小不能超过 10MB！');
+  }
+  return isAllowed && isLt10M;
+};
+
+const submitUpload = () => {
+  if (fileList.value.length === 0) {
+    ElMessage.warning('请先选择文件');
+    return;
+  }
+  // 触发上传
+  if (uploadRef.value) {
+    uploading.value = true;
+    uploadRef.value.submit();
+  }
+};
+
+const handleUploadSuccess = (response: any) => {
+  // el-upload 的响应可能是直接的数据，也可能在 data 属性中
+  const result = response.data || response;
+  if (result.success) {
+    ElMessage.success('文档上传成功！');
+    showUploadDialog.value = false;
+    fileList.value = [];
+    fetchKnowledge();
+  } else {
+    ElMessage.error(result.message || '上传失败');
+  }
+  uploading.value = false;
+};
+
+const handleUploadError = () => {
+  uploading.value = false;
+  ElMessage.error('上传失败，请检查网络连接');
+};
+
 onMounted(() => {
   fetchKnowledge();
 });
@@ -282,6 +418,15 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 15px;
+}
+
+.header-right {
+  display: flex;
+  gap: 10px;
+}
+
+.upload-demo {
+  margin-bottom: 20px;
 }
 
 .header-left h2 {

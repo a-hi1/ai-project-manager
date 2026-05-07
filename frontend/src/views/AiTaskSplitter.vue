@@ -1,4 +1,4 @@
-﻿﻿﻿<template>
+﻿﻿﻿﻿﻿﻿﻿﻿<template>
   <div class="ai-task-splitter">
     <el-card>
       <template #header>
@@ -14,6 +14,16 @@
       </template>
 
       <el-form :model="requirementForm" label-width="120px">
+        <el-form-item label="选择项目">
+          <el-select v-model="selectedProjectId" placeholder="请选择项目" style="width: 100%">
+            <el-option
+              v-for="project in projects"
+              :key="project.id"
+              :label="project.name"
+              :value="project.id"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="需求描述">
           <el-input
             v-model="requirementForm.requirement"
@@ -76,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ArrowLeft, MagicStick, RefreshLeft, DocumentAdd, Download } from '@element-plus/icons-vue';
@@ -84,15 +94,26 @@ import apiClient from '../utils/api';
 
 const route = useRoute();
 const router = useRouter();
-const projectId = Number(route.params.id) || 1;
-
 const loading = ref(false);
 const splitResult = ref('');
 const taskList = ref<any[]>([]);
+const projects = ref<any[]>([]);
+const selectedProjectId = ref<number | null>(null);
 
 const requirementForm = ref({
   requirement: ''
 });
+
+const fetchProjects = async () => {
+  try {
+    const result: any = await apiClient.get('/project/list');
+    if (result.data) {
+      projects.value = result.data;
+    }
+  } catch {
+    console.error('获取项目列表失败');
+  }
+};
 
 const splitTask = async () => {
   if (!requirementForm.value.requirement) {
@@ -103,7 +124,7 @@ const splitTask = async () => {
   loading.value = true;
   try {
     const apiResult: any = await apiClient.post('/ai/split-task', { requirement: requirementForm.value.requirement });
-    if (apiResult.success) {
+    if (apiResult.data) {
       splitResult.value = apiResult.data;
       try {
         // 更健壮的JSON解析逻辑
@@ -144,11 +165,16 @@ const createTasks = async () => {
     return;
   }
 
+  if (!selectedProjectId.value) {
+    ElMessage.warning('请先选择项目');
+    return;
+  }
+
   try {
     let successCount = 0;
     for (const task of taskList.value) {
       const result: any = await apiClient.post('/task/create', {
-        projectId: projectId,
+        projectId: selectedProjectId.value,
         name: task.任务名称 || task.name,
         description: task.描述 || task.description || '',
         duration: task.工期 || task.duration || 1,
@@ -156,7 +182,7 @@ const createTasks = async () => {
         status: 'todo'
       });
 
-      if (result.success) {
+      if (result.data || result.success) {
         successCount++;
       }
     }
@@ -189,6 +215,13 @@ const exportTasks = () => {
 const goBack = () => {
   router.back();
 };
+
+onMounted(() => {
+  fetchProjects();
+  if (route.params.id) {
+    selectedProjectId.value = Number(route.params.id);
+  }
+});
 </script>
 
 <style scoped>

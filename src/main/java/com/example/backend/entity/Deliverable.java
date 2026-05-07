@@ -19,6 +19,8 @@ public class Deliverable {
     private String description;
     @TableField("file_path")
     private String filePath;
+    @TableField("file_name")
+    private String fileName;
     @TableField("submitted_by")
     private Integer submittedBy;
     @TableField("submitted_at")

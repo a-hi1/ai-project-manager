@@ -57,20 +57,19 @@ public class AiService {
 
     public String parseRequirementDocument(String content) {
         String prompt = """
-                你是一个专业的需求分析专家。请分析以下需求文档，提取功能点、业务规则，并检测潜在的需求冲突，最后给出优化建议。
+                你是一个专业的需求分析专家。请分析以下需求文档，并以友好、专业的方式给出分析报告。
 
                 需求文档内容：
                 %s
 
-                请严格以JSON格式返回结果，不要包含任何其他文字说明。JSON格式如下：
-                {
-                  "功能点": ["功能1描述", "功能2描述"],
-                  "业务规则": ["规则1描述", "规则2描述"],
-                  "需求冲突": ["冲突1描述", "冲突2描述"],
-                  "优化建议": ["建议1描述", "建议2描述"]
-                }
-                
-                确保返回的是纯JSON字符串，不包含任何markdown格式标记。
+                请提供以下分析：
+                1. 文档概要（简要总结文档内容）
+                2. 功能点提取（列出文档中提到的主要功能）
+                3. 业务规则（文档中提到的规则和约束）
+                4. 风险提示（可能存在的问题或需要注意的地方）
+                5. 优化建议（如何改进这份文档）
+
+                请以自然、易读的格式返回，使用清晰的标题和列表。
                 """.formatted(content);
 
         try {
@@ -81,14 +80,7 @@ public class AiService {
             System.err.println("调用AI服务失败: " + e.getMessage());
             e.printStackTrace();
             // 返回一个友好的错误信息
-            return """
-                    {
-                      "功能点": ["AI服务暂时不可用，请稍后再试"],
-                      "业务规则": ["请检查API配置或网络连接"],
-                      "需求冲突": [],
-                      "优化建议": ["确保智谱AI API Key配置正确", "检查网络连接是否正常"]
-                    }
-                    """;
+            return "抱歉，AI分析服务暂时不可用，请稍后再试。错误信息：" + e.getMessage();
         }
     }
 
@@ -396,15 +388,12 @@ public class AiService {
 
     public String chatWithContext(String message, Integer projectId) {
         System.out.println("===== AiService.chatWithContext 开始 =====");
-        System.out.println("输入消息: " + message);
-        System.out.println("项目ID: " + projectId);
+        System.out.println("Input message: " + message);
+        System.out.println("Project ID: " + projectId);
         
         String systemPrompt = "你是一位专业的AI项目管理助手，专注于帮助项目经理更好地管理项目。" +
                             "你能够提供项目分析、任务建议、风险评估、进度跟踪等方面的帮助。" +
-                            "回答应该专业、实用、具体。" +
-                            "【重要】回答格式要求：不要使用Markdown格式，不要使用###、##、#等标题符号，" +
-                            "不要使用**加粗**、*斜体*等格式，直接用自然的中文分段回答，" +
-                            "每段开头空两格，段落之间空一行。";
+                            "回答应该专业、实用、具体。";
         
         StringBuilder fullContext = new StringBuilder(systemPrompt + "\n\n");
         

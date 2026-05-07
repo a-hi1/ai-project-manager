@@ -1,4 +1,4 @@
-﻿﻿﻿<template>
+﻿﻿﻿﻿<template>
   <div class="progress-tracking">
     <el-card>
       <template #header>
@@ -273,7 +273,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { 
-  ArrowLeft, Plus, Edit, Delete, Search, List, Timer, 
+  ArrowLeft, Plus, Edit, Delete, List, Timer, 
   Loading, CircleCheck, Warning 
 } from '@element-plus/icons-vue';
 import apiClient from '../utils/api';
@@ -403,7 +403,7 @@ const openCreateDialog = () => {
 const fetchTasks = async () => {
   loading.value = true;
   try {
-const `/task/project/${projectId}`: any = await apiClient.get(response);
+    const result: any = await apiClient.get(`/task/project/${projectId}`);
     if (result.success) {
       tasks.value = result.data || [];
     } else {
@@ -440,11 +440,14 @@ const saveTask = async () => {
     }
     taskForm.value.projectId = projectId;
 
-    const url = isEdit.value ? '/task/update' : '/task/create';
-    const method = isEdit.value ? 'PUT' : 'POST';
+    let result: any;
+    if (isEdit.value) {
+      result = await apiClient.put('/task/update', taskForm.value);
+    } else {
+      result = await apiClient.post('/task/create', taskForm.value);
+    }
 
-    const result: any = await apiClient.get(url);
-    if (result.success) {
+    if (result.data) {
       ElMessage.success(isEdit.value ? '编辑任务成功' : '添加任务成功');
       showCreateDialog.value = false;
       resetForm();
@@ -472,8 +475,8 @@ const deleteTask = async (id: number) => {
       cancelButtonText: '取消',
       type: 'warning'
     });
-const `/task/delete/${id}`: any = await apiClient.delete(response);
-    if (result.success) {
+    const result: any = await apiClient.delete(`/task/delete/${id}`);
+    if (result.data || result.success) {
       ElMessage.success('删除任务成功');
       await fetchTasks();
     } else {
@@ -503,9 +506,8 @@ const saveHours = async () => {
     if (task) {
       task.actualHours = (task.actualHours || 0) + hoursForm.value.hours;
       
-    const result: any = await apiClient.put('/task/update', task)
-      });
-      if (result.success) {
+      const result: any = await apiClient.put('/task/update', task);
+      if (result.data || result.success) {
         ElMessage.success('工时填报成功');
         showHoursDialog.value = false;
         await fetchTasks();

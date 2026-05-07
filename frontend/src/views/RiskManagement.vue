@@ -1,4 +1,4 @@
-﻿﻿﻿<template>
+﻿﻿﻿﻿﻿<template>
   <div class="risk-management">
     <el-card>
       <template #header>
@@ -298,7 +298,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { 
   ArrowLeft, Plus, Edit, Delete, Warning, CircleClose, 
-  Monitor, CircleCheck, Search, Calendar 
+  Monitor, CircleCheck, Calendar 
 } from '@element-plus/icons-vue';
 import apiClient from '../utils/api';
 
@@ -506,7 +506,6 @@ const saveRisk = async () => {
     }
 
     const url = isEditRisk.value ? '/risk/update' : '/risk/create';
-    const method = isEditRisk.value ? 'PUT' : 'POST';
 
     console.log('提交风险数据:', riskForm.value);
     const result: any = isEditRisk.value 

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<template>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<template>
   <div class="ai-chat-assistant">
     <div class="chat-layout">
       <!-- 侧边栏 -->
@@ -214,7 +214,6 @@ import apiClient from '../utils/api';
 const router = useRouter();
 const inputMessage = ref('');
 const messagesContainer = ref<HTMLElement | null>(null);
-const token = localStorage.getItem('token') || '';
 const showUploadDialog = ref(false);
 const fileList = ref<any[]>([]);
 const conversations = ref<any[]>([]);
@@ -455,7 +454,7 @@ const loadConversations = async () => {
   
   if (storedConversations.length > 0) {
     // 为每个会话添加默认状态字段，确保向后兼容
-    conversations.value = storedConversations.map(conv => ({
+    conversations.value = storedConversations.map((conv: any) => ({
       ...conv,
       isThinking: conv.isThinking || false,
       isStreaming: conv.isStreaming || false,
@@ -551,8 +550,6 @@ const sendMessage = async () => {
   conv.isThinking = true;
   conv.isStreaming = true;
   conv.streamingContent = '';
-
-  const isFirstMessage = conv.messages.length === 0;
 
   conv.messages.push({
     role: 'user',
@@ -676,7 +673,48 @@ const handleUploadSuccess = (response: any) => {
   ElMessage.success('文档上传成功！');
   showUploadDialog.value = false;
   fileList.value = [];
-  inputMessage.value = `请帮我分析一下刚刚上传的文档：${response.fileName}`;
+  
+  // 如果没有活跃会话，先创建一个
+  if (!activeConversationId.value) {
+    const newId = 'conv_' + Date.now().toString() + '_' + Math.random().toString(36).slice(2, 7);
+    activeConversationId.value = newId;
+    
+    const newConversation = {
+      id: newId,
+      title: '文档分析',
+      messages: [],
+      updatedAt: new Date().toISOString(),
+      isThinking: false,
+      isStreaming: false,
+      streamingContent: ''
+    };
+    conversations.value.unshift(newConversation);
+  }
+  
+  // 获取当前会话
+  const conv = currentConversation.value;
+  if (!conv) return;
+  
+  // 添加用户消息
+  conv.messages.push({
+    role: 'user',
+    message: `我上传了文档：${response.fileName}，请帮我分析一下`,
+    createdAt: new Date().toISOString()
+  });
+  
+  // 如果有 AI 解析结果，直接显示
+  if (response.data) {
+    conv.messages.push({
+      role: 'ai',
+      message: response.data,
+      createdAt: new Date().toISOString()
+    });
+  }
+  
+  // 保存到 localStorage
+  saveConversationsToStorage();
+  
+  scrollToBottom();
 };
 
 const handleUploadError = (_error: any) => {

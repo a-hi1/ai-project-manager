@@ -288,6 +288,7 @@ CREATE TABLE IF NOT EXISTS deliverable (
     name VARCHAR(200) NOT NULL,
     description TEXT,
     file_path VARCHAR(500),
+    file_name VARCHAR(500),
     submitted_by INTEGER NOT NULL,
     submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status VARCHAR(20) DEFAULT 'pending',

@@ -45,7 +45,7 @@ public class AiController {
     private JwtUtils jwtUtils;
 
     @PostMapping("/upload-document")
-    public Map<String, Object> uploadDocument(HttpServletRequest request, @RequestParam("file") MultipartFile file, @RequestParam(value = "projectId", required = false) Integer projectId) {
+    public Map<String, Object> uploadDocument(HttpServletRequest request, @RequestParam("file") MultipartFile file, @RequestParam(value = "projectId", required = false) Integer projectId, @RequestParam(value = "docType", required = false) String docType) {
         try {
             String authHeader = request.getHeader("Authorization");
             System.out.println("Auth Header: " + (authHeader != null ? authHeader.substring(0, Math.min(20, authHeader.length())) + "..." : "null"));
@@ -60,7 +60,7 @@ public class AiController {
             String fileName = file.getOriginalFilename();
             String contentType = file.getContentType();
             
-            System.out.println("Uploading file: " + fileName + ", size: " + file.getSize() + " bytes, type: " + contentType);
+            System.out.println("Uploading file: " + fileName + ", size: " + file.getSize() + " bytes, type: " + contentType + ", docType: " + docType);
             
             // 使用文档解析器解析内容
             String rawContent = DocumentParser.parseDocument(file);
@@ -74,7 +74,7 @@ public class AiController {
             document.setProjectId(projectId);
             document.setFileName(fileName);
             document.setTitle(fileName);
-            document.setDocType("file");
+            document.setDocType(docType != null ? docType : "file");
             document.setContent(content);
             document.setCreatedBy(userId);
             document.setCreatedAt(LocalDateTime.now());
