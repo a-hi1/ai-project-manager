@@ -43,24 +43,28 @@ public class DocumentArchiveController {
 
     @DeleteMapping("/{id}")
     public Map<String, Object> delete(@PathVariable Integer id) {
+        System.out.println("删除文档归档，ID: " + id);
         try {
-            boolean deleted = documentArchiveService.removeById(id);
+            boolean deleted = documentArchiveService.deleteById(id);
             if (deleted) {
                 return Map.of("success", true, "message", "删除成功");
             } else {
-                return Map.of("success", false, "message", "文档不存在");
+                return Map.of("success", false, "message", "文档不存在或删除失败");
             }
         } catch (Exception e) {
+            e.printStackTrace();
             return Map.of("success", false, "message", "删除失败: " + e.getMessage());
         }
     }
 
     @DeleteMapping("/project/{projectId}")
     public Map<String, Object> deleteByProjectId(@PathVariable Integer projectId) {
+        System.out.println("清空项目文档归档，ProjectID: " + projectId);
         try {
             documentArchiveService.deleteByProjectId(projectId);
             return Map.of("success", true, "message", "项目文档归档已清空");
         } catch (Exception e) {
+            e.printStackTrace();
             return Map.of("success", false, "message", "清空失败: " + e.getMessage());
         }
     }

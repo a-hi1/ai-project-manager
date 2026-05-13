@@ -1,5 +1,6 @@
 package com.example.backend.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.backend.entity.DocumentArchive;
 import com.example.backend.mapper.DocumentArchiveMapper;
@@ -28,10 +29,22 @@ public class DocumentArchiveService extends ServiceImpl<DocumentArchiveMapper, D
         create(archive);
     }
 
+    public boolean deleteById(Integer id) {
+        try {
+            return removeById(id);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public void deleteByProjectId(Integer projectId) {
-        List<DocumentArchive> archives = getByProjectId(projectId);
-        for (DocumentArchive archive : archives) {
-            removeById(archive.getId());
+        try {
+            LambdaQueryWrapper<DocumentArchive> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(DocumentArchive::getProjectId, projectId);
+            remove(wrapper);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }
