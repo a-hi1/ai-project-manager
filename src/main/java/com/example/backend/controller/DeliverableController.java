@@ -131,23 +131,51 @@ public class DeliverableController {
         }
     }
     
-    @GetMapping("/download")
-    public ResponseEntity<Resource> downloadDeliverable(@RequestParam("filePath") String filePath) {
+    @GetMapping("/download/{id}")
+    public ResponseEntity<Resource> downloadDeliverable(@PathVariable Integer id) {
+        System.out.println("=== 开始下载交付物，ID: " + id + " ===");
         try {
-            File file = new File(filePath);
+            Deliverable deliverable = deliverableService.getDeliverableById(id);
+            if (deliverable == null) {
+                System.out.println("交付物不存在");
+                return ResponseEntity.notFound().build();
+            }
+            System.out.println("交付物信息: " + deliverable);
+            
+            if (deliverable.getFilePath() == null) {
+                System.out.println("交付物没有文件路径");
+                return ResponseEntity.notFound().build();
+            }
+            
+            File file = new File(deliverable.getFilePath());
+            System.out.println("文件路径: " + file.getAbsolutePath());
+            
             if (!file.exists()) {
+                System.out.println("文件不存在");
                 return ResponseEntity.notFound().build();
             }
             
             Resource resource = new FileSystemResource(file);
-            String fileName = URLEncoder.encode(file.getName(), StandardCharsets.UTF_8.toString());
+            
+            // 获取显示文件名 - 简化逻辑，只从filePath提取
+            String displayFileName;
+            String[] parts = deliverable.getFilePath().split("[\\\\/]");
+            displayFileName = parts[parts.length - 1];
+            System.out.println("显示文件名: " + displayFileName);
+            
+            String encodedFileName = URLEncoder.encode(displayFileName, StandardCharsets.UTF_8.toString());
+            
+            System.out.println("文件大小: " + file.length() + " 字节");
+            System.out.println("=== 下载准备完成 ===");
             
             return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + fileName)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFileName)
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .contentLength(file.length())
                 .body(resource);
         } catch (Exception e) {
+            System.err.println("=== 下载失败 ===");
+            e.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }
     }

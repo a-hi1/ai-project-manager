@@ -17,4 +17,8 @@ public class DeliverableService extends ServiceImpl<DeliverableMapper, Deliverab
         save(deliverable);
         return deliverable;
     }
+    
+    public Deliverable getDeliverableById(Integer id) {
+        return baseMapper.findById(id);
+    }
 }
