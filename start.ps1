@@ -1,5 +1,5 @@
 # AI Project Management - Startup Script
-# Version 3.1
+# Version 3.2
 # Starts backend and frontend in separate windows
 
 Write-Host "========================================" -ForegroundColor Cyan
@@ -43,9 +43,12 @@ Write-Host ""
 Write-Host "All dependencies check passed!" -ForegroundColor Green
 Write-Host ""
 
+# Get script directory
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
 # Start Backend
 Write-Host "1. Starting Backend (port 8080)..." -ForegroundColor Cyan
-$backendCmd = "cd 'D:\zhuomian\软件项目管理'; Write-Host '=== BACKEND - Port 8080 ===' -ForegroundColor Cyan; mvn spring-boot:run"
+$backendCmd = "cd '$scriptDir'; Write-Host '=== BACKEND - Port 8080 ===' -ForegroundColor Cyan; mvn spring-boot:run"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCmd
 Write-Host "[OK] Backend started" -ForegroundColor Green
 
@@ -56,7 +59,8 @@ Start-Sleep -Seconds 20
 # Start Frontend
 Write-Host ""
 Write-Host "3. Starting Frontend (port 5173)..." -ForegroundColor Cyan
-$frontendCmd = "cd 'D:\zhuomian\软件项目管理\frontend'; Write-Host '=== FRONTEND - Port 5173 ===' -ForegroundColor Cyan; npm run dev"
+$frontendDir = Join-Path $scriptDir "frontend"
+$frontendCmd = "cd '$frontendDir'; Write-Host '=== FRONTEND - Port 5173 ===' -ForegroundColor Cyan; npm run dev"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $frontendCmd
 Write-Host "[OK] Frontend started" -ForegroundColor Green
 
