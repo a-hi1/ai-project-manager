@@ -1,11 +1,8 @@
 package com.example.backend.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.backend.entity.Notification;
-import com.example.backend.entity.User;
-import com.example.backend.entity.Project;
-import com.example.backend.entity.ProjectMember;
 import com.example.backend.mapper.NotificationMapper;
-import com.example.backend.mapper.ProjectMemberMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,9 +18,6 @@ public class NotificationService {
 
     @Autowired
     private WebSocketService webSocketService;
-    
-    @Autowired
-    private ProjectMemberMapper projectMemberMapper;
 
     @Transactional
     public Notification createNotification(Integer userId, String title, String content, String type) {
@@ -44,16 +38,26 @@ public class NotificationService {
     }
 
     public List<Notification> getNotificationsByUserId(Integer userId) {
-        return notificationMapper.findByUserId(userId);
+        LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Notification::getUserId, userId)
+               .orderByDesc(Notification::getCreateTime);
+        return notificationMapper.selectList(wrapper);
     }
 
     public int getUnreadCount(Integer userId) {
-        return notificationMapper.countUnreadByUserId(userId);
+        LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Notification::getUserId, userId)
+               .eq(Notification::getReadStatus, false);
+        return Math.toIntExact(notificationMapper.selectCount(wrapper));
     }
 
     @Transactional
     public void markAllAsRead(Integer userId) {
-        notificationMapper.markAllAsRead(userId);
+        LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Notification::getUserId, userId).eq(Notification::getReadStatus, false);
+        Notification updateNotification = new Notification();
+        updateNotification.setReadStatus(true);
+        notificationMapper.update(updateNotification, wrapper);
         webSocketService.sendUnreadCountUpdate(userId, 0);
     }
 
@@ -92,9 +96,9 @@ public class NotificationService {
         createNotification(userId, title, content, "change_request");
     }
 
-    public void sendTaskProgressNotification(Integer userId, String taskName, String progress) {
+    public void sendTaskProgressNotification(Integer userId, String taskName, Integer progress) {
         String title = "任务进度更新";
-        String content = String.format("任务 %s 进度更新为 %s%%", taskName, progress);
+        String content = String.format("任务 %s 进度更新为 %d%%", taskName, progress);
         createNotification(userId, title, content, "task_progress");
     }
 
@@ -186,21 +190,5 @@ public class NotificationService {
         String title = "系统预警";
         String content = String.format("[%s] %s", alertType, message);
         createNotification(userId, title, content, "system_alert");
-    }
-    
-    public void broadcastProjectNotification(Integer projectId, String title, String content, String type) {
-        List<ProjectMember> members = projectMemberMapper.findByProjectId(projectId);
-        for (ProjectMember member : members) {
-            createNotification(member.getUserId(), title, content, type);
-        }
-    }
-    
-    public void sendToProjectManagers(Integer projectId, String title, String content, String type) {
-        List<ProjectMember> members = projectMemberMapper.findByProjectId(projectId);
-        for (ProjectMember member : members) {
-            if ("pm".equalsIgnoreCase(member.getRole()) || "admin".equalsIgnoreCase(member.getRole())) {
-                createNotification(member.getUserId(), title, content, type);
-            }
-        }
     }
 }

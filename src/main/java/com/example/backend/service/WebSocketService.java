@@ -1,6 +1,7 @@
 package com.example.backend.service;
 
 import com.example.backend.entity.Notification;
+import com.example.backend.entity.Message;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -24,5 +25,10 @@ public class WebSocketService {
     public void sendGlobalNotification(Notification notification) {
         String destination = "/topic/notifications";
         messagingTemplate.convertAndSend(destination, notification);
+    }
+
+    public void sendMessageToUser(Integer userId, Message message) {
+        String destination = "/user/" + userId + "/queue/messages";
+        messagingTemplate.convertAndSend(destination, message);
     }
 }

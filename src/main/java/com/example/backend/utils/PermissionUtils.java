@@ -1,9 +1,7 @@
 package com.example.backend.utils;
 
 import com.example.backend.entity.User;
-import com.example.backend.entity.ProjectMember;
 import com.example.backend.service.UserService;
-import com.example.backend.service.ProjectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -14,9 +12,6 @@ public class PermissionUtils {
     
     @Autowired
     private UserService userService;
-    
-    @Autowired
-    private ProjectService projectService;
     
     // 权限代码常量
     public static final String PERM_USER_MANAGE = "user:manage";
@@ -73,8 +68,8 @@ public class PermissionUtils {
         return switch (permission) {
             case PERM_USER_MANAGE -> false;
             case PERM_PROJECT_CREATE, PERM_PROJECT_MANAGE, PERM_TASK_CREATE, PERM_TASK_MANAGE,
-                 PERM_REPORT_VIEW, PERM_REPORT_GENERATE, PERM_RISK_MANAGE, PERM_BUG_MANAGE,
-                 PERM_CHANGE_MANAGE, PERM_DOCUMENT_MANAGE, PERM_AI_USE, PERM_LOG_VIEW -> true;
+                PERM_REPORT_VIEW, PERM_REPORT_GENERATE, PERM_RISK_MANAGE, PERM_BUG_MANAGE,
+                PERM_CHANGE_MANAGE, PERM_DOCUMENT_MANAGE, PERM_AI_USE, PERM_LOG_VIEW -> true;
             default -> false;
         };
     }
@@ -83,9 +78,9 @@ public class PermissionUtils {
     private boolean checkDeveloperPermission(String permission) {
         return switch (permission) {
             case PERM_USER_MANAGE, PERM_PROJECT_CREATE, PERM_PROJECT_MANAGE, PERM_TASK_CREATE,
-                 PERM_REPORT_GENERATE, PERM_RISK_MANAGE, PERM_CHANGE_MANAGE -> false;
+                PERM_REPORT_GENERATE, PERM_RISK_MANAGE, PERM_CHANGE_MANAGE -> false;
             case PERM_TASK_MANAGE, PERM_REPORT_VIEW, PERM_BUG_MANAGE, 
-                 PERM_DOCUMENT_MANAGE, PERM_AI_USE -> true;
+                PERM_DOCUMENT_MANAGE, PERM_AI_USE -> true;
             default -> false;
         };
     }
@@ -94,8 +89,8 @@ public class PermissionUtils {
     private boolean checkTesterPermission(String permission) {
         return switch (permission) {
             case PERM_USER_MANAGE, PERM_PROJECT_CREATE, PERM_PROJECT_MANAGE, PERM_TASK_CREATE,
-                 PERM_TASK_MANAGE, PERM_REPORT_GENERATE, PERM_RISK_MANAGE, PERM_CHANGE_MANAGE,
-                 PERM_DOCUMENT_MANAGE, PERM_AI_USE -> false;
+                PERM_TASK_MANAGE, PERM_REPORT_GENERATE, PERM_RISK_MANAGE, PERM_CHANGE_MANAGE,
+                PERM_DOCUMENT_MANAGE, PERM_AI_USE -> false;
             case PERM_REPORT_VIEW, PERM_BUG_MANAGE -> true;
             default -> false;
         };
@@ -105,8 +100,8 @@ public class PermissionUtils {
     private boolean checkProductPermission(String permission) {
         return switch (permission) {
             case PERM_USER_MANAGE, PERM_PROJECT_CREATE, PERM_PROJECT_MANAGE, PERM_TASK_CREATE,
-                 PERM_TASK_MANAGE, PERM_REPORT_GENERATE, PERM_RISK_MANAGE, PERM_BUG_MANAGE,
-                 PERM_CHANGE_MANAGE, PERM_DOCUMENT_MANAGE -> false;
+                PERM_TASK_MANAGE, PERM_REPORT_GENERATE, PERM_RISK_MANAGE, PERM_BUG_MANAGE,
+                PERM_CHANGE_MANAGE, PERM_DOCUMENT_MANAGE -> false;
             case PERM_REPORT_VIEW, PERM_AI_USE -> true;
             default -> false;
         };
@@ -116,8 +111,8 @@ public class PermissionUtils {
     private boolean checkDesignerPermission(String permission) {
         return switch (permission) {
             case PERM_USER_MANAGE, PERM_PROJECT_CREATE, PERM_PROJECT_MANAGE, PERM_TASK_CREATE,
-                 PERM_TASK_MANAGE, PERM_REPORT_GENERATE, PERM_RISK_MANAGE, PERM_BUG_MANAGE,
-                 PERM_CHANGE_MANAGE, PERM_DOCUMENT_MANAGE, PERM_AI_USE -> false;
+                PERM_TASK_MANAGE, PERM_REPORT_GENERATE, PERM_RISK_MANAGE, PERM_BUG_MANAGE,
+                PERM_CHANGE_MANAGE, PERM_DOCUMENT_MANAGE, PERM_AI_USE -> false;
             case PERM_REPORT_VIEW -> true;
             default -> false;
         };
@@ -126,43 +121,6 @@ public class PermissionUtils {
     // 访客权限检查（只读）
     private boolean checkGuestPermission(String permission) {
         return permission.equals(PERM_REPORT_VIEW);
-    }
-    
-    // 验证用户是否为项目成员
-    public boolean isProjectMember(Integer userId, Integer projectId) {
-        ProjectMember member = projectService.getProjectMember(userId, projectId);
-        return member != null;
-    }
-    
-    // 验证用户在项目中的角色
-    public boolean hasProjectRole(Integer userId, Integer projectId, String... roles) {
-        ProjectMember member = projectService.getProjectMember(userId, projectId);
-        if (member == null) {
-            return false;
-        }
-        String userRole = member.getRole();
-        for (String role : roles) {
-            if (role.equalsIgnoreCase(userRole)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    // 验证用户是否为项目管理员（项目经理或创建者）
-    public boolean isProjectManager(Integer userId, Integer projectId) {
-        ProjectMember member = projectService.getProjectMember(userId, projectId);
-        if (member == null) {
-            return false;
-        }
-        // 项目级角色：pm, admin
-        String role = member.getRole();
-        return "pm".equalsIgnoreCase(role) || "admin".equalsIgnoreCase(role);
-    }
-    
-    // 验证用户是否为任务的创建者或执行者
-    public boolean isTaskAssigneeOrCreator(Integer userId, Integer taskId) {
-        return projectService.isTaskAssigneeOrCreator(userId, taskId);
     }
     
     // 获取当前登录用户ID
