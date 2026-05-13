@@ -27,4 +27,11 @@ public class DocumentArchiveService extends ServiceImpl<DocumentArchiveMapper, D
         archive.setContent("项目结束阶段自动归档");
         create(archive);
     }
+
+    public void deleteByProjectId(Integer projectId) {
+        List<DocumentArchive> archives = getByProjectId(projectId);
+        for (DocumentArchive archive : archives) {
+            removeById(archive.getId());
+        }
+    }
 }
