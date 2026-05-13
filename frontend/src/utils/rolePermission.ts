@@ -115,40 +115,40 @@ export const SYSTEM_MENUS: MenuItem[] = [
   },
   
   // ------------------------------
-  // AI助手模块
+  // AI助手模块（已隐藏）
   // ------------------------------
-  {
-    index: 'ai',
-    title: 'AI智能助手',
-    icon: ChatDotRound,
-    roles: ['admin', 'pm', 'developer', 'tester', 'product', 'designer'],
-    children: [
-      {
-        index: '/ai-chat',
-        title: 'AI对话',
-        icon: ChatDotRound,
-        roles: ['admin', 'pm', 'developer', 'tester', 'product', 'designer']
-      },
-      {
-        index: '/ai-knowledge',
-        title: '知识库',
-        icon: UploadFilled,
-        roles: ['admin', 'pm', 'developer', 'product', 'designer']
-      },
-      {
-        index: '/ai-requirement',
-        title: '需求解析',
-        icon: MagicStick,
-        roles: ['admin', 'pm', 'product']
-      },
-      {
-        index: '/ai-task',
-        title: '任务拆分',
-        icon: List,
-        roles: ['admin', 'pm']
-      }
-    ]
-  }
+  // {
+  //   index: 'ai',
+  //   title: 'AI智能助手',
+  //   icon: ChatDotRound,
+  //   roles: ['admin', 'pm', 'developer', 'tester', 'product', 'designer'],
+  //   children: [
+  //     {
+  //       index: '/ai-chat',
+  //       title: 'AI对话',
+  //       icon: ChatDotRound,
+  //       roles: ['admin', 'pm', 'developer', 'tester', 'product', 'designer']
+  //     },
+  //     {
+  //       index: '/ai-knowledge',
+  //       title: '知识库',
+  //       icon: UploadFilled,
+  //       roles: ['admin', 'pm', 'developer', 'product', 'designer']
+  //     },
+  //     {
+  //       index: '/ai-requirement',
+  //       title: '需求解析',
+  //       icon: MagicStick,
+  //       roles: ['admin', 'pm', 'product']
+  //     },
+  //     {
+  //       index: '/ai-task',
+  //       title: '任务拆分',
+  //       icon: List,
+  //       roles: ['admin', 'pm']
+  //     }
+  //   ]
+  // }
 ];
 
 // 仅用于权限验证的隐藏路由配置（完全按照文档权限设置）
@@ -252,7 +252,6 @@ export const ROLE_MODULES: Record<RoleType, string[]> = {
     '项目全周期管理',
     '用户管理',
     '系统设置',
-    'AI助手（全部功能）',
     '操作日志查看'
   ],
   pm: [
@@ -260,34 +259,29 @@ export const ROLE_MODULES: Record<RoleType, string[]> = {
     '任务分配和追踪',
     '甘特图和看板管理',
     '风险和变更管理',
-    'AI助手（全部功能）',
     '报告生成'
   ],
   developer: [
     '任务执行和进度更新',
     '缺陷修复',
     '查看项目文档',
-    'AI助手（对话、建议）',
     '文档上传'
   ],
   tester: [
     '缺陷报告和管理',
     '查看任务进度',
-    '查看项目文档',
-    'AI助手（对话）'
+    '查看项目文档'
   ],
   product: [
     '需求管理',
     '可行性分析',
     '项目复盘和报告',
-    'AI助手（全部功能）',
     '文档管理'
   ],
   designer: [
     '设计任务管理',
     '文档上传和查看',
-    '查看项目进度',
-    'AI助手（对话）'
+    '查看项目进度'
   ],
   guest: [
     '查看项目列表',

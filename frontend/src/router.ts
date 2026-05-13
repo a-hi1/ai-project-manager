@@ -123,26 +123,26 @@ const routes = [
         name: 'OperationLog',
         component: () => import('./views/OperationLog.vue')
       },
-      {
-        path: 'ai-chat',
-        name: 'AiChatAssistant',
-        component: () => import('./views/AiChatAssistant.vue')
-      },
-      {
-        path: 'ai-requirement',
-        name: 'AiRequirementParser',
-        component: () => import('./views/AiRequirementParser.vue')
-      },
-      {
-        path: 'ai-task',
-        name: 'AiTaskSplitter',
-        component: () => import('./views/AiTaskSplitter.vue')
-      },
-      {
-        path: 'ai-knowledge',
-        name: 'KnowledgeBase',
-        component: () => import('./views/KnowledgeBase.vue')
-      },
+      // {
+      //   path: 'ai-chat',
+      //   name: 'AiChatAssistant',
+      //   component: () => import('./views/AiChatAssistant.vue')
+      // },
+      // {
+      //   path: 'ai-requirement',
+      //   name: 'AiRequirementParser',
+      //   component: () => import('./views/AiRequirementParser.vue')
+      // },
+      // {
+      //   path: 'ai-task',
+      //   name: 'AiTaskSplitter',
+      //   component: () => import('./views/AiTaskSplitter.vue')
+      // },
+      // {
+      //   path: 'ai-knowledge',
+      //   name: 'KnowledgeBase',
+      //   component: () => import('./views/KnowledgeBase.vue')
+      // },
       {
         path: 'users',
         name: 'UserManagement',
