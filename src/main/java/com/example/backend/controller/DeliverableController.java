@@ -1,8 +1,10 @@
 package com.example.backend.controller;
 
+import com.example.backend.annotation.RequirePermission;
 import com.example.backend.entity.Deliverable;
 import com.example.backend.service.DeliverableService;
 import com.example.backend.utils.JwtUtils;
+import com.example.backend.utils.PermissionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -48,6 +50,7 @@ public class DeliverableController {
     }
 
     @PostMapping("/create")
+    @RequirePermission(PermissionUtils.PERM_DOCUMENT_MANAGE)
     public Map<String, Object> create(@RequestBody Deliverable deliverable) {
         try {
             Deliverable created = deliverableService.create(deliverable);
@@ -58,6 +61,7 @@ public class DeliverableController {
     }
     
     @PostMapping("/upload")
+    @RequirePermission(PermissionUtils.PERM_DOCUMENT_MANAGE)
     public Map<String, Object> uploadDeliverable(HttpServletRequest request,
                                                   @RequestParam("file") MultipartFile file,
                                                   @RequestParam("projectId") Integer projectId,
@@ -149,6 +153,7 @@ public class DeliverableController {
     }
 
     @PutMapping("/update")
+    @RequirePermission(PermissionUtils.PERM_DOCUMENT_MANAGE)
     public Map<String, Object> update(@RequestBody Deliverable deliverable) {
         try {
             deliverableService.updateById(deliverable);
@@ -159,6 +164,7 @@ public class DeliverableController {
     }
 
     @PutMapping("/approve/{id}")
+    @RequirePermission(PermissionUtils.PERM_DOCUMENT_MANAGE)
     public Map<String, Object> approve(@PathVariable Integer id, @RequestBody Map<String, Object> data) {
         try {
             Deliverable deliverable = deliverableService.getById(id);
@@ -176,6 +182,7 @@ public class DeliverableController {
     }
 
     @PutMapping("/reject/{id}")
+    @RequirePermission(PermissionUtils.PERM_DOCUMENT_MANAGE)
     public Map<String, Object> reject(@PathVariable Integer id, @RequestBody Map<String, Object> data) {
         try {
             Deliverable deliverable = deliverableService.getById(id);

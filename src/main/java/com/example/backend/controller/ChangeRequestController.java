@@ -1,7 +1,9 @@
 package com.example.backend.controller;
 
+import com.example.backend.annotation.RequirePermission;
 import com.example.backend.entity.ChangeRequest;
 import com.example.backend.service.ChangeRequestService;
+import com.example.backend.utils.PermissionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +23,7 @@ public class ChangeRequestController {
     }
 
     @PostMapping("/create")
+    @RequirePermission(PermissionUtils.PERM_CHANGE_MANAGE)
     public Map<String, Object> create(@RequestBody ChangeRequest changeRequest) {
         try {
             ChangeRequest created = changeRequestService.create(changeRequest);
@@ -31,6 +34,7 @@ public class ChangeRequestController {
     }
 
     @PutMapping("/update")
+    @RequirePermission(PermissionUtils.PERM_CHANGE_MANAGE)
     public Map<String, Object> update(@RequestBody ChangeRequest changeRequest) {
         try {
             changeRequestService.updateById(changeRequest);
@@ -41,6 +45,7 @@ public class ChangeRequestController {
     }
 
     @PutMapping("/approve/{id}")
+    @RequirePermission(PermissionUtils.PERM_CHANGE_MANAGE)
     public Map<String, Object> approve(@PathVariable Integer id, @RequestBody Map<String, Object> data) {
         try {
             ChangeRequest changeRequest = changeRequestService.getById(id);
@@ -57,6 +62,7 @@ public class ChangeRequestController {
     }
 
     @PutMapping("/reject/{id}")
+    @RequirePermission(PermissionUtils.PERM_CHANGE_MANAGE)
     public Map<String, Object> reject(@PathVariable Integer id, @RequestBody Map<String, Object> data) {
         try {
             ChangeRequest changeRequest = changeRequestService.getById(id);

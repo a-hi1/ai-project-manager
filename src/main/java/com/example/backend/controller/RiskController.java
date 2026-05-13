@@ -1,7 +1,9 @@
 package com.example.backend.controller;
 
+import com.example.backend.annotation.RequirePermission;
 import com.example.backend.entity.Risk;
 import com.example.backend.service.RiskService;
+import com.example.backend.utils.PermissionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +23,7 @@ public class RiskController {
     }
 
     @PostMapping("/create")
+    @RequirePermission(PermissionUtils.PERM_RISK_MANAGE)
     public Map<String, Object> createRisk(@RequestBody Risk risk) {
         try {
             Risk createdRisk = riskService.createRisk(risk);
@@ -31,6 +34,7 @@ public class RiskController {
     }
 
     @PutMapping("/update")
+    @RequirePermission(PermissionUtils.PERM_RISK_MANAGE)
     public Map<String, Object> updateRisk(@RequestBody Risk risk) {
         try {
             riskService.updateById(risk);
@@ -41,6 +45,7 @@ public class RiskController {
     }
 
     @DeleteMapping("/delete/{id}")
+    @RequirePermission(PermissionUtils.PERM_RISK_MANAGE)
     public Map<String, Object> deleteRisk(@PathVariable Integer id) {
         try {
             riskService.removeById(id);

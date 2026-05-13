@@ -1,7 +1,9 @@
 package com.example.backend.controller;
 
+import com.example.backend.annotation.RequirePermission;
 import com.example.backend.entity.Bug;
 import com.example.backend.service.BugService;
+import com.example.backend.utils.PermissionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +29,7 @@ public class BugController {
     }
 
     @PostMapping("/create")
+    @RequirePermission(PermissionUtils.PERM_BUG_MANAGE)
     public Map<String, Object> create(@RequestBody Bug bug) {
         try {
             Bug created = bugService.create(bug);
@@ -37,6 +40,7 @@ public class BugController {
     }
 
     @PutMapping("/update")
+    @RequirePermission(PermissionUtils.PERM_BUG_MANAGE)
     public Map<String, Object> update(@RequestBody Bug bug) {
         try {
             bugService.updateById(bug);
@@ -47,6 +51,7 @@ public class BugController {
     }
 
     @PutMapping("/assign/{id}")
+    @RequirePermission(PermissionUtils.PERM_BUG_MANAGE)
     public Map<String, Object> assign(@PathVariable Integer id, @RequestBody Map<String, Object> data) {
         try {
             Bug bug = bugService.getById(id);
@@ -62,6 +67,7 @@ public class BugController {
     }
 
     @PutMapping("/resolve/{id}")
+    @RequirePermission(PermissionUtils.PERM_BUG_MANAGE)
     public Map<String, Object> resolve(@PathVariable Integer id) {
         try {
             Bug bug = bugService.getById(id);
