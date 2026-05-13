@@ -15,6 +15,7 @@ public class PermissionUtils {
     
     // 权限代码常量
     public static final String PERM_USER_MANAGE = "user:manage";
+    public static final String PERM_USER_VIEW = "user:view";
     public static final String PERM_PROJECT_CREATE = "project:create";
     public static final String PERM_PROJECT_MANAGE = "project:manage";
     public static final String PERM_TASK_CREATE = "task:create";
@@ -66,8 +67,7 @@ public class PermissionUtils {
     // 项目经理权限检查
     private boolean checkPmPermission(String permission) {
         return switch (permission) {
-            case PERM_USER_MANAGE -> false;
-            case PERM_PROJECT_CREATE, PERM_PROJECT_MANAGE, PERM_TASK_CREATE, PERM_TASK_MANAGE,
+            case PERM_USER_VIEW, PERM_PROJECT_CREATE, PERM_PROJECT_MANAGE, PERM_TASK_CREATE, PERM_TASK_MANAGE,
                 PERM_REPORT_VIEW, PERM_REPORT_GENERATE, PERM_RISK_MANAGE, PERM_BUG_MANAGE,
                 PERM_CHANGE_MANAGE, PERM_DOCUMENT_MANAGE, PERM_AI_USE, PERM_LOG_VIEW -> true;
             default -> false;
@@ -79,7 +79,7 @@ public class PermissionUtils {
         return switch (permission) {
             case PERM_USER_MANAGE, PERM_PROJECT_CREATE, PERM_PROJECT_MANAGE, PERM_TASK_CREATE,
                 PERM_REPORT_GENERATE, PERM_RISK_MANAGE, PERM_CHANGE_MANAGE -> false;
-            case PERM_TASK_MANAGE, PERM_REPORT_VIEW, PERM_BUG_MANAGE, 
+            case PERM_USER_VIEW, PERM_TASK_MANAGE, PERM_REPORT_VIEW, PERM_BUG_MANAGE, 
                 PERM_DOCUMENT_MANAGE, PERM_AI_USE -> true;
             default -> false;
         };
@@ -91,7 +91,7 @@ public class PermissionUtils {
             case PERM_USER_MANAGE, PERM_PROJECT_CREATE, PERM_PROJECT_MANAGE, PERM_TASK_CREATE,
                 PERM_TASK_MANAGE, PERM_REPORT_GENERATE, PERM_RISK_MANAGE, PERM_CHANGE_MANAGE,
                 PERM_DOCUMENT_MANAGE, PERM_AI_USE -> false;
-            case PERM_REPORT_VIEW, PERM_BUG_MANAGE -> true;
+            case PERM_USER_VIEW, PERM_REPORT_VIEW, PERM_BUG_MANAGE -> true;
             default -> false;
         };
     }
@@ -102,7 +102,7 @@ public class PermissionUtils {
             case PERM_USER_MANAGE, PERM_PROJECT_CREATE, PERM_PROJECT_MANAGE, PERM_TASK_CREATE,
                 PERM_TASK_MANAGE, PERM_REPORT_GENERATE, PERM_RISK_MANAGE, PERM_BUG_MANAGE,
                 PERM_CHANGE_MANAGE, PERM_DOCUMENT_MANAGE -> false;
-            case PERM_REPORT_VIEW, PERM_AI_USE -> true;
+            case PERM_USER_VIEW, PERM_REPORT_VIEW, PERM_AI_USE -> true;
             default -> false;
         };
     }
@@ -113,7 +113,7 @@ public class PermissionUtils {
             case PERM_USER_MANAGE, PERM_PROJECT_CREATE, PERM_PROJECT_MANAGE, PERM_TASK_CREATE,
                 PERM_TASK_MANAGE, PERM_REPORT_GENERATE, PERM_RISK_MANAGE, PERM_BUG_MANAGE,
                 PERM_CHANGE_MANAGE, PERM_DOCUMENT_MANAGE, PERM_AI_USE -> false;
-            case PERM_REPORT_VIEW -> true;
+            case PERM_USER_VIEW, PERM_REPORT_VIEW -> true;
             default -> false;
         };
     }

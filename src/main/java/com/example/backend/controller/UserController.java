@@ -77,7 +77,7 @@ public class UserController {
     }
 
     @GetMapping("/list")
-    @RequirePermission(PermissionUtils.PERM_USER_MANAGE)
+    @RequirePermission(PermissionUtils.PERM_USER_VIEW)
     public Map<String, Object> list() {
         Map<String, Object> result = new HashMap<>();
         try {
