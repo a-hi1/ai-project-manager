@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿<template>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿<template>
   <div class="create-project">
     <el-card class="form-card">
       <template #header>
@@ -33,6 +33,7 @@
           />
         </el-form-item>
 
+        <!-- AI功能已隐藏
         <el-divider class="ai-divider">
           <span class="divider-text">
             <el-button
@@ -65,6 +66,7 @@
             </div>
           </el-alert>
         </div>
+        -->
 
         <el-form-item label="项目周期" prop="dateRange">
           <el-date-picker
