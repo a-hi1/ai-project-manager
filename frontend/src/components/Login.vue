@@ -97,6 +97,8 @@ const demoAccounts = [
   { role: '项目经理', username: 'pm', password: '123456' },
   { role: '开发人员', username: 'developer', password: '123456' },
   { role: '测试人员', username: 'tester', password: '123456' },
+  { role: '产品经理', username: 'product', password: '123456' },
+  { role: 'UI设计师', username: 'designer', password: '123456' },
   { role: '访客', username: 'guest', password: '123456' }
 ];
 

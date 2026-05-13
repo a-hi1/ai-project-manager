@@ -62,7 +62,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import NotificationPanel from '../components/NotificationPanel.vue';
-import { getMenusByRole, getHomePath, ROLES, type RoleType } from '../utils/rolePermission';
+import { getMenusByRole, getHomePath, ROLES, getRoleType, type RoleType } from '../utils/rolePermission';
 
 import type { User } from '../types';
 
@@ -143,25 +143,11 @@ const initUser = () => {
     // 根据roleId获取角色代码
     const roleId = parsedUser.roleId;
     if (roleId) {
-      userRole.value = mapRoleIdToCode(roleId);
+      userRole.value = getRoleType(roleId);
       // 设置当前菜单高亮
       activeMenu.value = route.path || getHomePath(userRole.value);
     }
   }
-};
-
-// roleId 映射到 角色代码
-const mapRoleIdToCode = (roleId: number): RoleType => {
-  const map: Record<number, RoleType> = {
-    1: 'admin',
-    2: 'pm',
-    3: 'developer',
-    4: 'tester',
-    5: 'product',
-    6: 'designer',
-    7: 'guest'
-  };
-  return map[roleId] || 'guest';
 };
 
 // 监听路由变化，更新菜单高亮

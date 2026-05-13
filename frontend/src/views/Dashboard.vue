@@ -3,9 +3,29 @@
     <div class="page-header">
       <div class="page-header-left">
         <h1 class="page-title">控制台</h1>
-        <p class="page-subtitle">欢迎使用AI项目管理系统</p>
+        <p class="page-subtitle">欢迎使用AI项目管理系统 - {{ ROLE_MODULES[userRole]?.[0] || '通用用户' }}</p>
       </div>
     </div>
+
+    <!-- 角色功能介绍 -->
+    <el-card shadow="hover" class="role-intro-card">
+      <template #header>
+        <div class="card-header">
+          <span>功能权限介绍</span>
+        </div>
+      </template>
+      <div class="role-intro-content">
+        <el-tag v-if="currentUser" type="success" size="large">
+          当前用户: {{ currentUser.username }} ({{ userRole }})
+        </el-tag>
+        <ul class="feature-list">
+          <li v-for="(feature, index) in ROLE_MODULES[userRole]" :key="index">
+            <el-icon><CircleCheck /></el-icon>
+            {{ feature }}
+          </li>
+        </ul>
+      </div>
+    </el-card>
 
     <el-row :gutter="20" class="stat-row">
       <el-col :xs="24" :sm="12" :md="6">
@@ -142,15 +162,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { Folder, Document, Warning, CircleClose, CircleCheck } from '@element-plus/icons-vue';
 import * as echarts from 'echarts';
 import apiClient from '../utils/api';
-import type { Project, DashboardStats, RiskAlert } from '../types';
+import type { Project, DashboardStats, RiskAlert, User } from '../types';
+import { getRoleType, ROLE_MODULES, type RoleType } from '../utils/rolePermission';
 
 const router = useRouter();
+
+// 获取当前用户信息和角色
+const getCurrentUser = (): User | null => {
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    return JSON.parse(userStr);
+  }
+  return null;
+};
+
+const currentUser = ref<User | null>(getCurrentUser());
+const userRole = computed<RoleType>(() => {
+  if (currentUser.value && currentUser.value.roleId) {
+    return getRoleType(currentUser.value.roleId);
+  }
+  return 'guest';
+});
 
 const stats = ref<DashboardStats>({
   totalProjects: 0,
@@ -384,6 +422,39 @@ onUnmounted(() => {
 <style scoped>
 .dashboard {
   padding: 0;
+}
+
+.role-intro-card {
+  margin-bottom: 24px;
+}
+
+.role-intro-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.feature-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  color: #606266;
+}
+
+.feature-list li .el-icon {
+  color: #67c23a;
 }
 
 .page-header {

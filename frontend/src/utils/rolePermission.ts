@@ -1,6 +1,7 @@
 /**
  * 角色权限配置
  * 定义每个角色可以访问的功能模块和菜单
+ * 完全按照项目文档实现
  */
 
 import {
@@ -35,17 +36,17 @@ export const ROLES: Record<RoleType, RoleInfo> = {
   admin: {
     code: 'admin',
     name: '系统管理员',
-    description: '系统最高权限管理者'
+    description: '系统最高权限，可访问全部功能'
   },
   pm: {
     code: 'pm',
     name: '项目经理',
-    description: '负责项目的整体管理和协调'
+    description: '负责项目全周期管理'
   },
   developer: {
     code: 'developer',
     name: '开发者',
-    description: '负责项目的开发和任务实现'
+    description: '负责项目开发和任务执行'
   },
   tester: {
     code: 'tester',
@@ -65,11 +66,11 @@ export const ROLES: Record<RoleType, RoleInfo> = {
   guest: {
     code: 'guest',
     name: '访客',
-    description: '只读权限用户'
+    description: '只读权限，仅可查看'
   }
 };
 
-// 系统菜单配置（按权限分组）
+// 系统菜单配置（完全按照文档权限设置）
 export const SYSTEM_MENUS: MenuItem[] = [
   // ------------------------------
   // 首页
@@ -150,7 +151,7 @@ export const SYSTEM_MENUS: MenuItem[] = [
   }
 ];
 
-// 仅用于权限验证的隐藏路由配置（不显示在菜单中）
+// 仅用于权限验证的隐藏路由配置（完全按照文档权限设置）
 const hiddenPermissionRoutes: MenuItem[] = [
   // 项目详情页
   {
@@ -245,7 +246,7 @@ const hiddenPermissionRoutes: MenuItem[] = [
   }
 ];
 
-// 角色对应的功能模块描述（用于Dashboard显示）
+// 角色对应的功能模块描述（完全按照文档）
 export const ROLE_MODULES: Record<RoleType, string[]> = {
   admin: [
     '项目全周期管理',
@@ -298,7 +299,7 @@ export const ROLE_MODULES: Record<RoleType, string[]> = {
 
 // 检查用户是否有权限访问某个路由
 export function hasPermission(role: RoleType, routePath: string): boolean {
-  // 登录和注册页面所有人都可以访问
+  // 登录和注册页所有人都可以访问
   if (routePath === '/login' || routePath === '/register') {
     return true;
   }
