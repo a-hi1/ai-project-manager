@@ -19,8 +19,11 @@ public class Deliverable {
     private String description;
     @TableField("file_path")
     private String filePath;
-    @TableField("file_name")
+    
+    // 文件名字段 - 从 file_path 中提取
+    @TableField(exist = false)
     private String fileName;
+    
     @TableField("submitted_by")
     private Integer submittedBy;
     @TableField("submitted_at")
@@ -31,4 +34,16 @@ public class Deliverable {
     @TableField("reviewed_at")
     private LocalDateTime reviewedAt;
     private String comments;
+    
+    // 辅助方法：从文件路径中获取文件名
+    public String getFileName() {
+        if (fileName != null) {
+            return fileName;
+        }
+        if (filePath != null) {
+            String[] parts = filePath.split("[\\\\/]");
+            return parts[parts.length - 1];
+        }
+        return null;
+    }
 }
