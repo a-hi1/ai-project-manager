@@ -193,13 +193,12 @@ const submitDeliverable = async () => {
 };
 
 const downloadDeliverable = (deliverable: any) => {
-  if (!deliverable.filePath) {
-    ElMessage.warning('该交付物没有文件');
+  if (!deliverable.id) {
+    ElMessage.warning('该交付物不存在');
     return;
   }
   
-  const filePath = encodeURIComponent(deliverable.filePath);
-  window.open(`/api/deliverable/download?filePath=${filePath}`, '_blank');
+  window.open(`/api/deliverable/download/${deliverable.id}`, '_blank');
 };
 
 const viewDeliverable = (deliverable: any) => {
