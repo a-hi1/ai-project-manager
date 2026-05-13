@@ -104,6 +104,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ArrowLeft, UploadFilled } from '@element-plus/icons-vue';
 import apiClient from '../utils/api';
+import axios from 'axios';
 
 const route = useRoute();
 const router = useRouter();
@@ -192,13 +193,58 @@ const submitDeliverable = async () => {
   }
 };
 
-const downloadDeliverable = (deliverable: any) => {
+const downloadDeliverable = async (deliverable: any) => {
   if (!deliverable.id) {
     ElMessage.warning('该交付物不存在');
     return;
   }
   
-  window.open(`/api/deliverable/download/${deliverable.id}`, '_blank');
+  try {
+    // 直接使用 axios 下载，绕过响应拦截器
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`/api/deliverable/download/${deliverable.id}`, {
+      responseType: 'blob',
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    
+    // 创建临时链接并触发下载
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    
+    // 设置文件名
+    let fileName = deliverable.fileName || deliverable.name;
+    if (!fileName || !fileName.includes('.')) {
+      // 尝试从响应头获取文件名
+      const contentDisposition = response.headers['content-disposition'];
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename\*?=['"]?(?:UTF-8'')?([^;\r\n"']*)['"]?/i);
+        if (fileNameMatch && fileNameMatch[1]) {
+          fileName = decodeURIComponent(fileNameMatch[1]);
+        }
+      }
+      // 从filePath提取
+      if (!fileName && deliverable.filePath) {
+        const parts = deliverable.filePath.split(/[\\/]/);
+        fileName = parts[parts.length - 1];
+      }
+      // 最后的备选方案
+      if (!fileName) {
+        fileName = `deliverable-${deliverable.id}`;
+      }
+    }
+    
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    ElMessage.success('下载开始');
+  } catch (error) {
+    console.error('下载失败:', error);
+    ElMessage.error('下载失败');
+  }
 };
 
 const viewDeliverable = (deliverable: any) => {
