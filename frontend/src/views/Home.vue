@@ -186,100 +186,134 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 首页布局 - 专业设计系统 */
 .home {
   height: 100vh;
-  background-color: #f5f7fa;
+  background-color: var(--bg);
 }
 
 .el-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
-  color: white;
-  padding: 0 24px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 0 var(--space-6);
   height: 64px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow);
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .header-left h1 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
 }
 
 .role-tag {
-  margin-left: 8px;
-  font-size: 12px;
-  border-radius: 4px;
+  margin-left: var(--space-2);
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
-  font-size: 14px;
+  gap: var(--space-4);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
 }
 
 .header-right :deep(.notification-btn) {
-  color: white;
+  color: var(--text-secondary);
+  transition: all var(--transition);
 }
 
 .header-right :deep(.notification-btn:hover) {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  background: var(--bg-tertiary);
+  color: var(--primary);
 }
 
 .el-aside {
-  background-color: #ffffff;
-  border-right: 1px solid #e5e7eb;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border-light);
   overflow-y: auto;
+  transition: all var(--transition);
 }
 
 .el-menu-vertical-demo {
   height: 100%;
-  background-color: #ffffff;
+  background-color: var(--bg-secondary);
   border-right: none;
 }
 
 .el-menu-vertical-demo :deep(.el-menu-item),
 .el-menu-vertical-demo :deep(.el-sub-menu__title) {
-  color: #303133;
-  height: 52px;
-  line-height: 52px;
-  font-size: 14px;
+  color: var(--text-secondary);
+  height: 48px;
+  line-height: 48px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all var(--transition);
+  border-radius: var(--radius);
+  margin: 4px 12px;
 }
 
 .el-menu-vertical-demo :deep(.el-menu-item:hover),
 .el-menu-vertical-demo :deep(.el-sub-menu__title:hover) {
-  background-color: #ecf5ff;
-  color: #409eff;
+  background-color: var(--bg-tertiary);
+  color: var(--primary-dark);
 }
 
 .el-menu-vertical-demo :deep(.el-menu-item.is-active) {
-  background-color: #ecf5ff;
-  color: #409eff;
-  border-right: 3px solid #409eff;
+  background: linear-gradient(135deg, var(--primary-light), rgba(59, 130, 246, 0.1));
+  color: var(--primary-dark);
+  font-weight: 600;
 }
 
 .el-menu-vertical-demo :deep(.el-sub-menu .el-menu) {
-  background-color: #f5f7fa;
+  background-color: transparent;
 }
 
 .el-menu-vertical-demo :deep(.el-sub-menu .el-menu-item) {
-  padding-left: 45px !important;
+  padding-left: 56px !important;
+  margin: 2px 12px;
+  font-size: 0.8125rem;
 }
 
 .el-main {
-  padding: 24px;
-  background-color: #f5f7fa;
+  padding: 0;
+  background-color: var(--bg);
   overflow-y: auto;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .el-header {
+    padding: 0 var(--space-4);
+  }
+  
+  .header-left h1 {
+    font-size: 1rem;
+  }
+  
+  .el-aside {
+    position: fixed;
+    z-index: 200;
+    height: 100vh;
+  }
 }
 </style>

@@ -138,96 +138,163 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
+/* 登录页面 - 专业设计，无紫白渐变 */
 .login-container {
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: var(--bg);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 背景装饰 - 微妙的圆形元素 */
+.login-container::before,
+.login-container::after {
+  content: '';
+  position: absolute;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, var(--primary-light), transparent);
+  opacity: 0.5;
+}
+
+.login-container::before {
+  width: 400px;
+  height: 400px;
+  top: -200px;
+  left: -100px;
+}
+
+.login-container::after {
+  width: 300px;
+  height: 300px;
+  bottom: -150px;
+  right: -50px;
 }
 
 .login-bg {
   width: 100%;
-  max-width: 420px;
-  padding: 20px;
+  max-width: 440px;
+  padding: var(--space-6);
+  position: relative;
+  z-index: 1;
 }
 
 .login-card {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 40px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-10);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-light);
+  transition: all var(--transition-slow);
+}
+
+.login-card:hover {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: var(--space-8);
 }
 
 .logo {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .title {
-  font-size: 24px;
+  font-size: 1.75rem;
   font-weight: 700;
-  color: #303133;
-  margin: 0 0 8px 0;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2) 0;
+  letter-spacing: -0.02em;
 }
 
 .subtitle {
-  font-size: 14px;
-  color: #909399;
+  font-size: 0.9375rem;
+  color: var(--text-tertiary);
   margin: 0;
+  font-weight: 400;
 }
 
 .login-form {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 }
 
 .login-button {
   width: 100%;
   height: 48px;
-  font-size: 16px;
-  border-radius: 8px;
+  font-size: 1rem;
+  border-radius: var(--radius);
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .demo-accounts {
   text-align: center;
-  padding-top: 20px;
-  border-top: 1px solid #ebeef5;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-light);
 }
 
 .demo-title {
-  font-size: 12px;
-  color: #909399;
-  margin: 0 0 12px 0;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin: 0 0 var(--space-3) 0;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .demo-list {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .demo-list .el-tag {
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  font-weight: 500;
+  font-size: 0.8125rem;
 }
 
 .demo-list .el-tag:hover {
-  transform: scale(1.05);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .login-footer {
   text-align: center;
-  margin-top: 24px;
+  margin-top: var(--space-6);
 }
 
 .login-footer p {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 14px;
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
   margin: 0;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .login-bg {
+    padding: var(--space-4);
+  }
+  
+  .login-card {
+    padding: var(--space-6);
+  }
+  
+  .title {
+    font-size: 1.5rem;
+  }
+  
+  .login-container::before,
+  .login-container::after {
+    display: none;
+  }
 }
 </style>
