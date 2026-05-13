@@ -134,11 +134,9 @@ public class TaskService extends ServiceImpl<TaskMapper, Task> {
         if (oldProgress != null && existingTask.getProgress() != null && !oldProgress.equals(existingTask.getProgress())) {
             Project project = projectMapper.selectById(existingTask.getProjectId());
             String projectName = project != null ? project.getName() : "未知项目";
-            notificationService.sendToProjectManagers(existingTask.getProjectId(), 
-                "任务进度更新", 
-                String.format("任务 %s 进度从 %d%% 更新为 %d%%", existingTask.getName(), oldProgress, existingTask.getProgress()),
-                "task_progress"
-            );
+            if (existingTask.getAssignedTo() != null) {
+                notificationService.sendTaskProgressNotification(existingTask.getAssignedTo(), existingTask.getName(), existingTask.getProgress());
+            }
         }
         
         return existingTask;
