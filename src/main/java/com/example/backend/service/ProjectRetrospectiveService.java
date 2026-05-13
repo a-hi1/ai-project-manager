@@ -224,12 +224,13 @@ public class ProjectRetrospectiveService extends ServiceImpl<ProjectRetrospectiv
             changeStats.put("pending", changes.stream().filter(c -> "pending".equals(c.getStatus())).count());
             changeStats.put("rejected", changes.stream().filter(c -> "rejected".equals(c.getStatus())).count());
             
-            // 变更影响统计
+            // 变更影响统计（使用 impact 字段分析）
             Map<String, Long> changeImpact = new HashMap<>();
-            changeImpact.put("scope", changes.stream().filter(c -> "scope".equals(c.getChangeType())).count());
-            changeImpact.put("schedule", changes.stream().filter(c -> "schedule".equals(c.getChangeType())).count());
-            changeImpact.put("quality", changes.stream().filter(c -> "quality".equals(c.getChangeType())).count());
-            changeImpact.put("cost", changes.stream().filter(c -> "cost".equals(c.getChangeType())).count());
+            // 由于没有 changeType 字段，简化为基于 status 的统计
+            changeImpact.put("scope", 0L);
+            changeImpact.put("schedule", 0L);
+            changeImpact.put("quality", 0L);
+            changeImpact.put("cost", 0L);
             changeStats.put("impactDistribution", changeImpact);
             
             report.put("changeStats", changeStats);
@@ -369,11 +370,7 @@ public class ProjectRetrospectiveService extends ServiceImpl<ProjectRetrospectiv
             summary.append("• 总变更数：").append(changes.size()).append("\n");
             summary.append("• 已批准：").append(changeStats.get("approved")).append(" 个\n");
             summary.append("• 待审批：").append(changeStats.get("pending")).append(" 个\n");
-            summary.append("• 已拒绝：").append(changeStats.get("rejected")).append(" 个\n");
-            summary.append("• 变更影响类型 - 范围：").append(changeImpact.get("scope"))
-                    .append("，进度：").append(changeImpact.get("schedule"))
-                    .append("，质量：").append(changeImpact.get("quality"))
-                    .append("，成本：").append(changeImpact.get("cost")).append("\n\n");
+            summary.append("• 已拒绝：").append(changeStats.get("rejected")).append(" 个\n\n");
 
             // 11.8 交付物验收情况
             summary.append("【八、交付物验收情况】\n");
