@@ -393,9 +393,30 @@ export function getHomePath(_role: RoleType): string {
   return '/dashboard';
 }
 
-// 根据roleId获取角色类型
+// 根据roleId获取角色类型（更健壮的版本）
 export function getRoleType(roleId: number): RoleType {
-  const roleMap: Record<number, RoleType> = {
+  // 先尝试从数据库获取角色列表（通过API或者本地存储）
+  // 这里使用更容错的映射，同时支持两种可能性
+  
+  // 方案1：按名称查找（如果有缓存的角色列表）
+  const roles = JSON.parse(localStorage.getItem('roles') || '[]');
+  if (roles.length > 0) {
+    const role = roles.find((r: any) => r.id === roleId);
+    if (role && role.name) {
+      return role.name.toLowerCase() as RoleType;
+    }
+  }
+  
+  // 方案2：硬编码映射（支持两种可能的ID顺序）
+  const roleMap1: Record<number, RoleType> = {
+    1: 'admin',
+    2: 'pm',
+    3: 'developer',
+    4: 'tester',
+    5: 'guest'
+  };
+  
+  const roleMap2: Record<number, RoleType> = {
     1: 'admin',
     2: 'pm',
     3: 'developer',
@@ -404,7 +425,33 @@ export function getRoleType(roleId: number): RoleType {
     6: 'designer',
     7: 'guest'
   };
-  return roleMap[roleId] || 'guest';
+  
+  // 检查用户名来判断角色（最可靠的方式）
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      if (user.username) {
+        const usernameMap: Record<string, RoleType> = {
+          'admin': 'admin',
+          'pm': 'pm',
+          'developer': 'developer',
+          'tester': 'tester',
+          'product': 'product',
+          'designer': 'designer',
+          'guest': 'guest'
+        };
+        if (usernameMap[user.username]) {
+          return usernameMap[user.username];
+        }
+      }
+    } catch (e) {
+      console.error('解析用户信息失败', e);
+    }
+  }
+  
+  // 最后尝试硬编码映射
+  return roleMap2[roleId] || roleMap1[roleId] || 'guest';
 }
 
 export default {

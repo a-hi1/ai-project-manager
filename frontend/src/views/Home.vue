@@ -140,10 +140,35 @@ const initUser = () => {
   if (userStr) {
     const parsedUser = JSON.parse(userStr);
     user.value = parsedUser;
-    // 根据roleId获取角色代码
-    const roleId = parsedUser.roleId;
-    if (roleId) {
-      userRole.value = getRoleType(roleId);
+    
+    // 优先通过用户名判断角色（最可靠）
+    const username = parsedUser.username;
+    if (username) {
+      const usernameMap: Record<string, RoleType> = {
+        'admin': 'admin',
+        'pm': 'pm',
+        'developer': 'developer',
+        'tester': 'tester',
+        'product': 'product',
+        'designer': 'designer',
+        'guest': 'guest'
+      };
+      if (usernameMap[username]) {
+        userRole.value = usernameMap[username];
+      } else {
+        // 用户名不匹配时，再使用getRoleType
+        const roleId = parsedUser.roleId;
+        if (roleId) {
+          userRole.value = getRoleType(roleId);
+        }
+      }
+      
+      console.log('用户信息:', {
+        username: username,
+        roleId: parsedUser.roleId,
+        determinedRole: userRole.value
+      });
+      
       // 设置当前菜单高亮
       activeMenu.value = route.path || getHomePath(userRole.value);
     }
