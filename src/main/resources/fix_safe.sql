@@ -1,11 +1,9 @@
 -- =============================================
--- 完整修复：确保所有7个角色和用户都正确存在
+-- Fix roles and users (English only - no encoding issues)
 -- =============================================
 
--- 确保所有7个角色都存在（按正确顺序）
 DO $$
 BEGIN
-    -- 插入缺失的角色
     INSERT INTO role (name, description) VALUES
     ('admin', 'System Administrator'),
     ('pm', 'Project Manager'),
@@ -17,10 +15,8 @@ BEGIN
     ON CONFLICT (name) DO NOTHING;
 END $$;
 
--- 查看当前的角色ID映射
 SELECT id, name, description FROM role ORDER BY id;
 
--- 确保所有7个测试用户都存在
 DO $$
 DECLARE
     v_admin_id INTEGER;
@@ -31,7 +27,6 @@ DECLARE
     v_designer_id INTEGER;
     v_guest_id INTEGER;
 BEGIN
-    -- 获取角色ID
     SELECT id INTO v_admin_id FROM role WHERE name = 'admin';
     SELECT id INTO v_pm_id FROM role WHERE name = 'pm';
     SELECT id INTO v_developer_id FROM role WHERE name = 'developer';
@@ -40,7 +35,6 @@ BEGIN
     SELECT id INTO v_designer_id FROM role WHERE name = 'designer';
     SELECT id INTO v_guest_id FROM role WHERE name = 'guest';
 
-    -- 插入或更新测试用户
     INSERT INTO user_info (username, password, email, role_id, status) VALUES
     ('admin', '123456', 'admin@example.com', v_admin_id, 1),
     ('pm', '123456', 'pm@example.com', v_pm_id, 1),
@@ -55,7 +49,6 @@ BEGIN
         status = EXCLUDED.status;
 END $$;
 
--- 查看修复后的完整用户列表
 SELECT 
     u.id,
     u.username,
@@ -66,10 +59,3 @@ SELECT
 FROM user_info u
 LEFT JOIN role r ON u.role_id = r.id
 ORDER BY u.id;
-
--- =============================================
--- 如果发现角色ID混乱，可以使用下面的脚本重置（谨慎使用）
--- =============================================
--- TRUNCATE TABLE user_info CASCADE;
--- TRUNCATE TABLE role CASCADE;
--- 然后重新运行完整的init.sql
