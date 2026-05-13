@@ -7,8 +7,10 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.backend.entity.PageResult;
 import com.example.backend.entity.Task;
 import com.example.backend.entity.TaskDependency;
+import com.example.backend.entity.Project;
 import com.example.backend.mapper.TaskDependencyMapper;
 import com.example.backend.mapper.TaskMapper;
+import com.example.backend.mapper.ProjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,12 @@ import java.util.UUID;
 public class TaskService extends ServiceImpl<TaskMapper, Task> {
     @Autowired
     private TaskDependencyMapper taskDependencyMapper;
+    
+    @Autowired
+    private ProjectMapper projectMapper;
+    
+    @Autowired
+    private NotificationService notificationService;
 
     public Task getById(Integer id) {
         return super.getById(id);
@@ -66,6 +74,13 @@ public class TaskService extends ServiceImpl<TaskMapper, Task> {
             task.setPath("/" + UUID.randomUUID().toString());
         }
         save(task);
+        
+        if (task.getAssignedTo() != null) {
+            Project project = projectMapper.selectById(task.getProjectId());
+            String projectName = project != null ? project.getName() : "未知项目";
+            notificationService.sendTaskAssignedNotification(task.getAssignedTo(), task.getName(), projectName);
+        }
+        
         return task;
     }
 
@@ -77,6 +92,8 @@ public class TaskService extends ServiceImpl<TaskMapper, Task> {
         if (existingTask == null) {
             throw new RuntimeException("任务不存在");
         }
+        
+        Integer oldProgress = existingTask.getProgress();
         
         if (task.getStatus() != null) {
             existingTask.setStatus(task.getStatus());
@@ -102,10 +119,28 @@ public class TaskService extends ServiceImpl<TaskMapper, Task> {
             existingTask.setEndDate(task.getEndDate());
         }
         if (task.getAssignedTo() != null) {
+            Integer oldAssignee = existingTask.getAssignedTo();
             existingTask.setAssignedTo(task.getAssignedTo());
+            
+            if (!task.getAssignedTo().equals(oldAssignee)) {
+                Project project = projectMapper.selectById(task.getProjectId());
+                String projectName = project != null ? project.getName() : "未知项目";
+                notificationService.sendTaskAssignedNotification(task.getAssignedTo(), task.getName(), projectName);
+            }
         }
         
         updateById(existingTask);
+        
+        if (oldProgress != null && existingTask.getProgress() != null && !oldProgress.equals(existingTask.getProgress())) {
+            Project project = projectMapper.selectById(existingTask.getProjectId());
+            String projectName = project != null ? project.getName() : "未知项目";
+            notificationService.sendToProjectManagers(existingTask.getProjectId(), 
+                "任务进度更新", 
+                String.format("任务 %s 进度从 %d%% 更新为 %d%%", existingTask.getName(), oldProgress, existingTask.getProgress()),
+                "task_progress"
+            );
+        }
+        
         return existingTask;
     }
 

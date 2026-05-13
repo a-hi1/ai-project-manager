@@ -711,13 +711,11 @@ const fetchTasks = async () => {
       nextTick(() => renderChart());
     } else {
       ElMessage.error(apiResult.message || '获取任务失败');
-      // 添加一些模拟数据用于测试
       addMockData();
     }
   } catch (error) {
     console.error('获取任务失败:', error);
     ElMessage.error('网络错误，使用模拟数据');
-    // 添加一些模拟数据用于测试
     addMockData();
   }
 };
@@ -743,12 +741,10 @@ const saveTask = async () => {
       createdBy: userData.id 
     };
     
-    // 先本地更新，让界面立即响应
     if (isEditTask.value && taskForm.value.id !== null) {
       const taskIndex = rawTasks.value.findIndex(t => t.id === taskForm.value.id);
       if (taskIndex !== -1) {
         const updateTask = { ...rawTasks.value[taskIndex] };
-        // 只更新Task类型兼容的字段
         updateTask.name = taskForm.value.name;
         updateTask.description = taskForm.value.description;
         updateTask.parentId = taskForm.value.parentId;
@@ -852,7 +848,6 @@ const goBack = () => { router.push(`/project/${projectId}`); };
 
 watch([filterStatus, filterPriority, searchQuery], () => nextTick(() => renderChart()));
 
-// 监听任务数据变化，自动重新渲染甘特图
 watch(rawTasks, () => {
   nextTick(() => renderChart());
 }, { deep: true });
@@ -1151,7 +1146,6 @@ onMounted(() => { fetchTasks(); });
   margin-top: 4px;
 }
 
-/* 响应式 */
 @media (max-width: 1024px) {
   .gantt-page {
     padding: 16px;

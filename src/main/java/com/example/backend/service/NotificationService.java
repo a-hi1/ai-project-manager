@@ -1,7 +1,11 @@
 package com.example.backend.service;
 
 import com.example.backend.entity.Notification;
+import com.example.backend.entity.User;
+import com.example.backend.entity.Project;
+import com.example.backend.entity.ProjectMember;
 import com.example.backend.mapper.NotificationMapper;
+import com.example.backend.mapper.ProjectMemberMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,11 +15,15 @@ import java.util.List;
 
 @Service
 public class NotificationService {
+    
     @Autowired
     private NotificationMapper notificationMapper;
 
     @Autowired
     private WebSocketService webSocketService;
+    
+    @Autowired
+    private ProjectMemberMapper projectMemberMapper;
 
     @Transactional
     public Notification createNotification(Integer userId, String title, String content, String type) {
@@ -94,5 +102,105 @@ public class NotificationService {
         String title = "里程碑提醒";
         String content = String.format("项目 %s 的里程碑 %s 即将到达", projectName, milestoneName);
         createNotification(userId, title, content, "milestone");
+    }
+    
+    public void sendBugReportedNotification(Integer userId, String bugTitle, String projectName) {
+        String title = "新缺陷报告";
+        String content = String.format("项目 %s 报告了新缺陷：%s", projectName, bugTitle);
+        createNotification(userId, title, content, "bug_reported");
+    }
+    
+    public void sendBugAssignedNotification(Integer userId, String bugTitle, String projectName) {
+        String title = "缺陷分配";
+        String content = String.format("您被分配了新缺陷：%s，项目：%s", bugTitle, projectName);
+        createNotification(userId, title, content, "bug_assigned");
+    }
+    
+    public void sendBugFixedNotification(Integer userId, String bugTitle, String projectName) {
+        String title = "缺陷已修复";
+        String content = String.format("您关注的缺陷已修复：%s，项目：%s", bugTitle, projectName);
+        createNotification(userId, title, content, "bug_fixed");
+    }
+    
+    public void sendDeadlineWarningNotification(Integer userId, String taskName, String deadline) {
+        String title = "任务截止预警";
+        String content = String.format("任务 %s 即将到期，截止日期：%s", taskName, deadline);
+        createNotification(userId, title, content, "deadline_warning");
+    }
+    
+    public void sendOverdueWarningNotification(Integer userId, String taskName) {
+        String title = "任务逾期警告";
+        String content = String.format("任务 %s 已逾期，请尽快处理", taskName);
+        createNotification(userId, title, content, "overdue_warning");
+    }
+    
+    public void sendProgressStagnationNotification(Integer userId, String taskName, int days) {
+        String title = "进度停滞提醒";
+        String content = String.format("任务 %s 已有 %d 天未更新进度，请确认状态", taskName, days);
+        createNotification(userId, title, content, "stagnation_warning");
+    }
+    
+    public void sendProjectCompletionNotification(Integer userId, String projectName) {
+        String title = "项目完成";
+        String content = String.format("恭喜！项目 %s 已完成", projectName);
+        createNotification(userId, title, content, "project_completed");
+    }
+    
+    public void sendProjectDelayNotification(Integer userId, String projectName, String expectedDate, String actualDate) {
+        String title = "项目延期预警";
+        String content = String.format("项目 %s 预计延期，原计划：%s，预计完成：%s", projectName, expectedDate, actualDate);
+        createNotification(userId, title, content, "project_delay");
+    }
+    
+    public void sendDailyReportNotification(Integer userId, String projectName) {
+        String title = "日报已生成";
+        String content = String.format("项目 %s 的日报已生成，请查看", projectName);
+        createNotification(userId, title, content, "daily_report");
+    }
+    
+    public void sendWeeklyReportNotification(Integer userId, String projectName) {
+        String title = "周报已生成";
+        String content = String.format("项目 %s 的周报已生成，请查看", projectName);
+        createNotification(userId, title, content, "weekly_report");
+    }
+    
+    public void sendDeliverySubmittedNotification(Integer userId, String deliverableName, String projectName) {
+        String title = "交付物已提交";
+        String content = String.format("项目 %s 提交了新的交付物：%s，请审核", projectName, deliverableName);
+        createNotification(userId, title, content, "delivery_submitted");
+    }
+    
+    public void sendDeliveryApprovedNotification(Integer userId, String deliverableName, String projectName) {
+        String title = "交付物已验收";
+        String content = String.format("交付物 %s 已通过验收，项目：%s", deliverableName, projectName);
+        createNotification(userId, title, content, "delivery_approved");
+    }
+    
+    public void sendDocumentUpdatedNotification(Integer userId, String documentName, String projectName) {
+        String title = "文档已更新";
+        String content = String.format("项目 %s 的文档 %s 已更新", projectName, documentName);
+        createNotification(userId, title, content, "document_updated");
+    }
+    
+    public void sendSystemAlertNotification(Integer userId, String alertType, String message) {
+        String title = "系统预警";
+        String content = String.format("[%s] %s", alertType, message);
+        createNotification(userId, title, content, "system_alert");
+    }
+    
+    public void broadcastProjectNotification(Integer projectId, String title, String content, String type) {
+        List<ProjectMember> members = projectMemberMapper.findByProjectId(projectId);
+        for (ProjectMember member : members) {
+            createNotification(member.getUserId(), title, content, type);
+        }
+    }
+    
+    public void sendToProjectManagers(Integer projectId, String title, String content, String type) {
+        List<ProjectMember> members = projectMemberMapper.findByProjectId(projectId);
+        for (ProjectMember member : members) {
+            if ("pm".equalsIgnoreCase(member.getRole()) || "admin".equalsIgnoreCase(member.getRole())) {
+                createNotification(member.getUserId(), title, content, type);
+            }
+        }
     }
 }

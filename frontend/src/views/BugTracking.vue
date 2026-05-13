@@ -1,4 +1,4 @@
-﻿﻿﻿﻿<template>
+﻿﻿﻿﻿﻿﻿﻿﻿<template>
   <div class="bug-tracking">
     <el-card>
       <template #header>
