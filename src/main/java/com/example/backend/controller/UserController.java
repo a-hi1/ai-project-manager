@@ -1,7 +1,9 @@
 package com.example.backend.controller;
 
+import com.example.backend.annotation.RequirePermission;
 import com.example.backend.entity.User;
 import com.example.backend.service.UserService;
+import com.example.backend.utils.PermissionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,6 +77,7 @@ public class UserController {
     }
 
     @GetMapping("/list")
+    @RequirePermission(PermissionUtils.PERM_USER_MANAGE)
     public Map<String, Object> list() {
         Map<String, Object> result = new HashMap<>();
         try {
@@ -92,6 +95,7 @@ public class UserController {
     }
 
     @PostMapping("/update")
+    @RequirePermission(PermissionUtils.PERM_USER_MANAGE)
     public Map<String, Object> update(@RequestBody User user) {
         Map<String, Object> result = new HashMap<>();
         try {
@@ -109,6 +113,7 @@ public class UserController {
     }
 
     @DeleteMapping("/delete")
+    @RequirePermission(PermissionUtils.PERM_USER_MANAGE)
     public Map<String, Object> delete(@RequestParam Integer id) {
         Map<String, Object> result = new HashMap<>();
         try {

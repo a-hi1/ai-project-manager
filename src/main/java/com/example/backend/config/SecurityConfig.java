@@ -33,7 +33,6 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/user/register", "/api/user/login").permitAll()
-                .requestMatchers("/api/user/list", "/api/user/update", "/api/user/delete").permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/notification/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()

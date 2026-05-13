@@ -1,9 +1,11 @@
 package com.example.backend.controller;
 
+import com.example.backend.annotation.RequirePermission;
 import com.example.backend.entity.PageResult;
 import com.example.backend.entity.Task;
 import com.example.backend.entity.TaskDependency;
 import com.example.backend.service.TaskService;
+import com.example.backend.utils.PermissionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -61,6 +63,7 @@ public class TaskController {
     }
 
     @PostMapping("/create")
+    @RequirePermission(PermissionUtils.PERM_TASK_CREATE)
     public Map<String, Object> createTask(@RequestBody Task task) {
         try {
             Task createdTask = taskService.createTask(task);
@@ -71,6 +74,7 @@ public class TaskController {
     }
 
     @PutMapping("/update")
+    @RequirePermission(PermissionUtils.PERM_TASK_MANAGE)
     public Map<String, Object> updateTask(@RequestBody Task task) {
         try {
             System.out.println("更新任务，收到数据 id: " + task.getId() + ", status: " + task.getStatus());
@@ -85,6 +89,7 @@ public class TaskController {
     }
 
     @DeleteMapping("/delete/{id}")
+    @RequirePermission(PermissionUtils.PERM_TASK_MANAGE)
     public Map<String, Object> deleteTask(@PathVariable Integer id) {
         try {
             taskService.removeById(id);
@@ -95,6 +100,7 @@ public class TaskController {
     }
 
     @PostMapping("/dependency/add")
+    @RequirePermission(PermissionUtils.PERM_TASK_MANAGE)
     public Map<String, Object> addDependency(@RequestBody TaskDependency dependency) {
         try {
             TaskDependency created = taskService.addDependency(dependency);
@@ -105,6 +111,7 @@ public class TaskController {
     }
 
     @DeleteMapping("/dependency/{id}")
+    @RequirePermission(PermissionUtils.PERM_TASK_MANAGE)
     public Map<String, Object> removeDependency(@PathVariable Integer id) {
         try {
             taskService.removeDependency(id);

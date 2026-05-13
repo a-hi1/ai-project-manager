@@ -1,9 +1,11 @@
 package com.example.backend.controller;
 
+import com.example.backend.annotation.RequirePermission;
 import com.example.backend.entity.PageResult;
 import com.example.backend.entity.Project;
 import com.example.backend.entity.ProjectMember;
 import com.example.backend.service.ProjectService;
+import com.example.backend.utils.PermissionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +19,7 @@ public class ProjectController {
     private ProjectService projectService;
     
     @PostMapping("/create")
+    @RequirePermission(PermissionUtils.PERM_PROJECT_CREATE)
     public Map<String, Object> createProject(@RequestBody Project project) {
         try {
             Project createdProject = projectService.createProject(project);
@@ -43,6 +46,7 @@ public class ProjectController {
     }
     
     @PutMapping("/update")
+    @RequirePermission(PermissionUtils.PERM_PROJECT_MANAGE)
     public Map<String, Object> updateProject(@RequestBody Project project) {
         try {
             Project existingProject = projectService.getById(project.getId());
@@ -64,6 +68,7 @@ public class ProjectController {
     }
     
     @DeleteMapping("/delete/{id}")
+    @RequirePermission(PermissionUtils.PERM_PROJECT_MANAGE)
     public Map<String, Object> deleteProject(@PathVariable Integer id) {
         try {
             projectService.removeById(id);
@@ -74,6 +79,7 @@ public class ProjectController {
     }
     
     @PostMapping("/member/add")
+    @RequirePermission(PermissionUtils.PERM_PROJECT_MANAGE)
     public Map<String, Object> addProjectMember(@RequestBody ProjectMember projectMember) {
         try {
             projectService.addProjectMember(projectMember);
@@ -84,6 +90,7 @@ public class ProjectController {
     }
     
     @DeleteMapping("/member/remove")
+    @RequirePermission(PermissionUtils.PERM_PROJECT_MANAGE)
     public Map<String, Object> removeProjectMember(@RequestParam Integer projectId, @RequestParam Integer userId) {
         try {
             projectService.removeProjectMember(projectId, userId);
