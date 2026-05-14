@@ -292,17 +292,34 @@ const fetchUsers = async () => {
   }
 };
 
+const getRoleName = (roleId: number) => {
+  const roleMap: Record<number, string> = {
+    1: '管理员',
+    2: '项目经理',
+    3: '开发者',
+    4: '测试人员',
+    5: '产品经理',
+    6: '设计师',
+    7: '访客'
+  };
+  return roleMap[roleId] || '未知';
+};
+
 const getAssigneeName = (userId: number | undefined) => {
   if (!userId) return '';
   const user = users.value.find(u => u.id === userId);
-  return user && user.username ? user.username : '';
+  if (user && user.roleId) {
+    return getRoleName(user.roleId);
+  }
+  return '';
 };
 
 const getAssigneeInitials = (userId: number | undefined) => {
   if (!userId) return '?';
   const user = users.value.find(u => u.id === userId);
-  if (user && user.username && typeof user.username === 'string' && user.username.length > 0) {
-    return user.username.charAt(0).toUpperCase();
+  if (user && user.roleId) {
+    const roleName = getRoleName(user.roleId);
+    return roleName.charAt(0);
   }
   return '?';
 };

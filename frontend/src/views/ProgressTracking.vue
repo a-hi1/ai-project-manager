@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿<template>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<template>
   <div class="progress-tracking">
     <el-card>
       <template #header>
@@ -125,6 +125,14 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="负责人" width="120" align="center">
+          <template #default="scope">
+            <el-tag v-if="scope.row.assignedTo" type="info" size="small">
+              {{ getUserNameById(scope.row.assignedTo) }}
+            </el-tag>
+            <span v-else style="color: #909399">-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="进度" width="160" align="center">
           <template #default="scope">
             <el-progress 
@@ -233,7 +241,7 @@
             <el-option
               v-for="user in users"
               :key="user.id"
-              :label="user.username"
+              :label="getRoleName(user.roleId)"
               :value="user.id"
             />
           </el-select>
@@ -418,13 +426,34 @@ const fetchTasks = async () => {
 
 const fetchUsers = async () => {
   try {
-    const result: any = await apiClient.get('/role/list');
+    const result: any = await apiClient.get('/user/list');
     if (result.success) {
       users.value = result.data || [];
     }
   } catch (error) {
     console.error('获取用户列表失败');
   }
+};
+
+const getRoleName = (roleId: number) => {
+  const roleMap: Record<number, string> = {
+    1: '管理员',
+    2: '项目经理',
+    3: '开发者',
+    4: '测试人员',
+    5: '产品经理',
+    6: '设计师',
+    7: '访客'
+  };
+  return roleMap[roleId] || '未知';
+};
+
+const getUserNameById = (userId: number) => {
+  const user = users.value.find(u => u.id === userId);
+  if (user) {
+    return getRoleName(user.roleId);
+  }
+  return '未分配';
 };
 
 const saveTask = async () => {
