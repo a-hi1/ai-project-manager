@@ -1,8 +1,7 @@
 -- =============================================
--- 修复 deliverable 表 - 添加缺失的 file_name 字段
+-- Fix deliverable table - add missing file_name field
 -- =============================================
 
--- 检查并添加 file_name 字段
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -11,13 +10,13 @@ BEGIN
         AND column_name = 'file_name'
     ) THEN
         ALTER TABLE deliverable ADD COLUMN file_name VARCHAR(500);
-        RAISE NOTICE '已添加 file_name 字段到 deliverable 表';
+        RAISE NOTICE 'Added file_name column to deliverable table';
     ELSE
-        RAISE NOTICE 'file_name 字段已存在';
+        RAISE NOTICE 'file_name column already exists';
     END IF;
 END $$;
 
--- 验证修改
+-- Verify the change
 SELECT column_name, data_type, is_nullable
 FROM information_schema.columns
 WHERE table_name = 'deliverable'

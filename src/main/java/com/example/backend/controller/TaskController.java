@@ -5,6 +5,7 @@ import com.example.backend.entity.PageResult;
 import com.example.backend.entity.Task;
 import com.example.backend.entity.TaskDependency;
 import com.example.backend.service.TaskService;
+import com.example.backend.utils.JwtUtils;
 import com.example.backend.utils.PermissionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,8 @@ import java.util.Map;
 public class TaskController {
     @Autowired
     private TaskService taskService;
+    @Autowired
+    private JwtUtils jwtUtils;
 
     @GetMapping("/project/{projectId}")
     public Map<String, Object> getTasksByProjectId(@PathVariable Integer projectId) {
@@ -64,11 +67,13 @@ public class TaskController {
 
     @PostMapping("/create")
     @RequirePermission(PermissionUtils.PERM_TASK_CREATE)
-    public Map<String, Object> createTask(@RequestBody Task task) {
+    public Map<String, Object> createTask(@RequestBody Task task, @RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
-            Task createdTask = taskService.createTask(task);
+            Integer userId = jwtUtils.getUserIdFromToken(authHeader);
+            Task createdTask = taskService.createTask(task, userId);
             return Map.of("success", true, "data", createdTask);
         } catch (Exception e) {
+            e.printStackTrace();
             return Map.of("success", false, "message", e.getMessage());
         }
     }

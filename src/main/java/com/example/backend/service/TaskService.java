@@ -62,7 +62,7 @@ public class TaskService extends ServiceImpl<TaskMapper, Task> {
     }
 
     @Transactional
-    public Task createTask(Task task) {
+    public Task createTask(Task task, Integer userId) {
         if (task.getParentId() != null) {
             Task parentTask = getById(task.getParentId());
             if (parentTask != null) {
@@ -73,6 +73,7 @@ public class TaskService extends ServiceImpl<TaskMapper, Task> {
             task.setLevel(0);
             task.setPath("/" + UUID.randomUUID().toString());
         }
+        task.setCreatedBy(userId);
         save(task);
         
         if (task.getAssignedTo() != null) {
