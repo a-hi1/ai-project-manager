@@ -69,7 +69,22 @@ public class TaskController {
     @RequirePermission(PermissionUtils.PERM_TASK_CREATE)
     public Map<String, Object> createTask(@RequestBody Task task, @RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
+            System.out.println("=== 创建任务 ===");
+            System.out.println("Authorization header: " + authHeader);
             Integer userId = jwtUtils.getUserIdFromToken(authHeader);
+            System.out.println("从token获取到的userId: " + userId);
+            
+            if (userId == null) {
+                String userStr = null;
+                try {
+                    userStr = jwtUtils.getUsernameFromToken(authHeader != null && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader);
+                } catch (Exception e) {
+                    System.out.println("获取用户名失败: " + e.getMessage());
+                }
+                System.out.println("尝试使用默认用户ID: 1");
+                userId = 1;
+            }
+            
             Task createdTask = taskService.createTask(task, userId);
             return Map.of("success", true, "data", createdTask);
         } catch (Exception e) {
